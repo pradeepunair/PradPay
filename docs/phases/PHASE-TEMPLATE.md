@@ -70,6 +70,7 @@ Update and link:
 - [ ] Security, privacy, accessibility, cost, and operations reviewed in proportion to change.
 - [ ] Rollback/recovery behavior tested where state or external calls changed.
 - [ ] Limitations and next-phase dependencies recorded.
+- [ ] Markdown and generated HTML phase records match and HTML is visually reviewed.
 
 ## Handoff
 

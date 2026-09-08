@@ -61,13 +61,55 @@ submitted-payment reconciliation available.
 | Fact | Verified value | Method |
 | --- | --- | --- |
 | Stripe CLI | Not installed | Local command inventory |
-| Dashboard session | Not authenticated; currently at sign-in | Browser verification |
+| Dashboard session | Authenticated to dedicated `PradPay sandbox`; sandbox banner visible | Browser verification |
+| Current activity | No API requests, event deliveries, or payments shown | Dashboard and Workbench |
+| API keys | Standard test keys exist; no restricted keys exist | Test-mode developer settings |
+| Default API version | `2026-08-26.dahlia` | Workbench; do not change without a compatibility test |
+| Event destinations | None configured | Workbench destinations |
 | ACP/SPT product status | Stripe documentation labels agentic commerce and SPT as private preview | Official Stripe documentation |
 | Documented test path | Test helper can simulate a granted SPT, then confirm a PaymentIntent with that SPT | Official Stripe SPT documentation |
-| Owner-account SPT availability | Unknown | Requires owner login and account-level test |
+| Owner-account SPT availability | Unknown | Requires a controlled test-helper call; dashboard access alone does not prove entitlement |
 
 No test object, webhook endpoint, payment, API key, or account setting has been
 created or changed.
+
+### Credential safety finding
+
+During read-only inspection, Stripe's API-key page exposed the existing standard
+test secret through browser accessibility output without a reveal/copy action.
+The value is not recorded in this repository and must not be reused. Rotate that
+test secret before any PaymentLab API call, then store the replacement only in a
+local secret store or an environment-scoped Vercel secret—not in chat, Git,
+documentation, fixtures, logs, or model context.
+
+### Stripe work required for the Phase 0 spike
+
+1. Rotate the exposed standard test secret. Prefer a restricted key if Stripe
+   exposes all SPT and PaymentIntent permissions required by the tested flow;
+   otherwise use a newly rotated standard *test* secret in the isolated spike
+   environment and rotate it again after the spike.
+2. Pin the exact Stripe API version used by code and webhook events. Start by
+   testing the account default `2026-08-26.dahlia`; do not silently inherit later
+   account-version changes.
+3. Deploy an isolated HTTPS callback at `/api/webhooks/stripe` before creating a
+   dashboard event destination. Local development can use Stripe CLI after it is
+   installed, but its signing secret is different from a dashboard endpoint.
+4. Register only the required seller events: `payment_intent.succeeded`,
+   `payment_intent.payment_failed`, `payment_intent.processing`,
+   `payment_intent.requires_action`, `payment_intent.canceled`,
+   `shared_payment.granted_token.used`, and
+   `shared_payment.granted_token.deactivated`.
+5. Store the endpoint-specific signing secret outside Git and verify signatures
+   against the untouched raw request body before parsing or acknowledging an event.
+6. Call the documented SPT test helper with a fictional seller/cart reference,
+   USD 1.00 maximum, short expiry, and a newly generated operation identity. A
+   successful response proves account access; an authorization or unsupported-
+   endpoint response is a documented private-preview blocker.
+7. If the helper succeeds, create and confirm exactly one USD 1.00 automatic-
+   capture PaymentIntent using the granted SPT, a deterministic idempotency key,
+   safe metadata, and the same tested API version.
+8. Prove signed receipt, duplicate delivery, out-of-order handling, and provider
+   lookup/reconciliation while retaining only safe object identifiers and digests.
 
 ## ACP
 
@@ -97,8 +139,8 @@ handler/delegation support remains open and is not implied by schema validity.
 
 ## Decisions blocked on owner or account evidence
 
-1. Sign in to the intended Stripe test/sandbox account and verify SPT test-helper
-   access without exposing keys.
+1. Rotate the exposed Stripe test secret, store its replacement safely, and
+   verify SPT test-helper access without exposing the replacement.
 2. Decide whether Phase 0 may create a separate Vercel PaymentLab project and a
    small test database/workflow deployment.
 3. Review the proposed Neon/Prisma choice and authorize resource creation only

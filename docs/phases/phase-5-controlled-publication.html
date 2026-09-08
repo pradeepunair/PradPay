@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Phase 5 — controlled public publication, generated from the maintained Markdown phase record.">
+  <title>Phase 5 — controlled public publication · PaymentLab AI</title>
+  <style>
+  :root { color-scheme: light; --ink:#162a3a; --muted:#5f7180; --line:#c9d7df; --paper:#fff; --wash:#eef6f7; --accent:#176b73; --accent-2:#dff3ee; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; color:var(--ink); background:#f5f8f9; font:16px/1.62 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  a { color:#075e68; text-underline-offset:.16em; }
+  .shell { max-width:1120px; margin:0 auto; padding:24px; }
+  .topbar { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:18px; }
+  .brand { font-weight:800; letter-spacing:.02em; text-decoration:none; color:var(--ink); }
+  nav { display:flex; gap:8px; flex-wrap:wrap; }
+  nav a { padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:var(--paper); text-decoration:none; font-size:.88rem; }
+  main { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(24px,5vw,60px); box-shadow:0 16px 50px rgba(27,61,73,.08); }
+  h1,h2,h3,h4 { line-height:1.18; letter-spacing:-.02em; scroll-margin-top:20px; }
+  h1 { font-size:clamp(2rem,5vw,3.6rem); max-width:20ch; margin-top:0; }
+  h2 { margin-top:2.4em; padding-top:.5em; border-top:1px solid var(--line); }
+  h3 { margin-top:1.8em; color:var(--accent); }
+  p,li { max-width:82ch; }
+  code { padding:.12em .32em; border-radius:5px; background:var(--wash); font-size:.92em; }
+  pre { overflow:auto; padding:18px; border-radius:12px; color:#e8f4f4; background:#102a34; }
+  pre code { padding:0; color:inherit; background:transparent; }
+  .table-wrap { overflow-x:auto; margin:1.2rem 0; }
+  table { width:100%; border-collapse:collapse; min-width:680px; }
+  th,td { padding:10px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+  th { background:var(--wash); font-size:.9rem; }
+  .task { list-style:none; margin-left:-1.3rem; }
+  input[type=checkbox] { margin-right:.65rem; accent-color:var(--accent); }
+  blockquote { margin:1.2rem 0; padding:.3rem 1rem; border-left:4px solid var(--accent); background:var(--accent-2); }
+  footer { padding:18px 4px 40px; color:var(--muted); font-size:.88rem; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; }
+  .card { padding:20px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+  .card h2 { border:0; margin:.2rem 0 .6rem; padding:0; font-size:1.2rem; }
+  .status { color:var(--muted); font-size:.9rem; }
+  @media (max-width:640px) { .shell { padding:12px; } main { border-radius:12px; padding:22px; } }
+  @media print { body { background:#fff; } .shell { max-width:none; padding:0; } .topbar { display:none; } main { border:0; box-shadow:none; padding:0; } a { color:inherit; } }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="index.html">PaymentLab AI · Phase documentation</a>
+      <nav aria-label="Phase navigation"><a href="index.html">Index</a><a href="phase-0-capability-and-decisions.html">Phase 0</a><a href="phase-1-domain-and-guided-replay.html">Phase 1</a><a href="phase-2-durable-agents-and-acp.html">Phase 2</a><a href="phase-3-stripe-sale-and-recovery.html">Phase 3</a><a href="phase-4-portfolio-ready-release.html">Phase 4</a><a href="phase-5-controlled-publication.html">Phase 5</a></nav>
+    </header>
+    <main><h1 id="phase-5-controlled-public-publication">Phase 5 — controlled public publication</h1>
+<ul><li>Status: not started</li><li>Owner: Pradeep Nair</li><li>Start date: pending Phase 4 gate and explicit owner approval</li><li>Gate review date: pending</li><li>PRD milestone: Portfolio release</li><li>Applicable acceptance checks: A01-A28 plus release smoke and rollback</li></ul>
+<h2 id="outcome">Outcome</h2>
+<p>The approved PaymentLab release is publicly reachable, the portfolio links to it, the stable Stripe test callback works, operating controls are active, and a tested replay-only rollback remains available.</p>
+<h2 id="entry-conditions">Entry conditions</h2>
+<ul><li>Phase 4 release candidate and full evidence review pass.</li><li>Owner explicitly approves publication, domain/DNS change, portfolio change, live-admission setting, and operating limits.</li><li>There are no unresolved launch-critical payment attempts.</li><li>Exact Vercel, Stripe, GitHub, portfolio, and DNS targets are reverified.</li></ul>
+<h2 id="scope">Scope</h2>
+<h3 id="included">Included</h3>
+<ul><li>Promote the reviewed compatible build and migrations in the verified Vercel scope.</li><li>Configure only approved demo-domain records while preserving apex, <code>www</code>, email, verification, and unrelated DNS records.</li><li>Configure and verify the stable Stripe test webhook endpoint.</li><li>Apply the separately reviewed portfolio project/case-study link through branch, PR, preview, and merge workflow.</li><li>Test public replay, authorized live access, isolation, TLS, DNS, streaming/poll fallback, metrics labels, and case-study/source links.</li><li>Monitor initial runs and retain reconciliation-safe replay-only rollback.</li></ul>
+<h3 id="explicitly-excluded">Explicitly excluded</h3>
+<ul><li>Any unrelated portfolio, DNS, email, verification, or production-payment change.</li><li>Live-mode Stripe, real fulfillment, silent limit increases, or inferred publication authority.</li></ul>
+<h2 id="component-changes">Component changes</h2>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>Change</th><th>Contract/migration impact</th><th>Tests</th><th>Documentation updated</th></tr></thead><tbody><tr><td>Vercel release</td><td>Promote approved build and migrations</td><td>Release manifest</td><td>Public smoke</td><td>Release record</td></tr><tr><td>Domain/DNS</td><td>Add only approved demo records</td><td>DNS/TLS target</td><td>DNS/TLS checks</td><td>Runbook</td></tr><tr><td>Stripe webhook</td><td>Point test endpoint to stable callback</td><td>Endpoint secret rotation</td><td>Signed callback smoke</td><td>Operations docs</td></tr><tr><td>Portfolio</td><td>Add approved link/case-study card</td><td>Separate repository PR</td><td>Preview/live link checks</td><td>Portfolio evidence</td></tr><tr><td>Monitoring</td><td>Enable launch observation and alerts</td><td>Alert ownership</td><td>Initial-run checks</td><td>Incident runbook</td></tr><tr><td>Admission control</td><td>Apply approved live/replay setting and budgets</td><td>Runtime configuration</td><td>Kill-switch test</td><td>Operations docs</td></tr></tbody></table></div>
+<h2 id="flow-changes">Flow changes</h2>
+<ul><li>Update <a href="../architecture.md">architecture</a> with final public endpoints and ownership.</li><li>Update <a href="../design-flow.md">experience flows</a> with public/replay/live availability.</li><li>Update <a href="../data-flow.md">data flows</a> with stable callback and monitoring boundaries.</li><li>Update <a href="../traceability.md">acceptance traceability</a> with public smoke evidence.</li><li>Record the portfolio PR, preview, merge, and release identifiers without secrets.</li></ul>
+<h2 id="decisions-and-risks">Decisions and risks</h2>
+<div class="table-wrap"><table><thead><tr><th>Item</th><th>Type</th><th>Owner</th><th>Resolution/evidence</th></tr></thead><tbody><tr><td>Publication authorization</td><td>Required decision</td><td>Pradeep</td><td>Explicit approval at action time</td></tr><tr><td>DNS target scope</td><td>Operational risk</td><td>Pradeep</td><td>Read-only inventory and exact-record change plan</td></tr><tr><td>Launch abuse/cost</td><td>Operational risk</td><td>Operations</td><td>Budgets, admission limits, alerts, kill switch</td></tr><tr><td>Pending payment during rollback</td><td>Reliability risk</td><td>Engineering</td><td>Reconciliation remains enabled</td></tr></tbody></table></div>
+<h2 id="verification-plan">Verification plan</h2>
+<div class="table-wrap"><table><thead><tr><th>Check</th><th>Layer/environment</th><th>Expected result</th><th>Evidence</th></tr></thead><tbody><tr><td>DNS and TLS</td><td>Public</td><td>Approved hostname resolves with valid TLS</td><td>Check output</td></tr><tr><td>Public Guided Replay</td><td>Browser</td><td>Stable, read-only, accessible journey</td><td>Smoke report</td></tr><tr><td>Authorized Live Sandbox</td><td>Browser/integration</td><td>Test-only bounded run or intentionally disabled label</td><td>Smoke report</td></tr><tr><td>Session isolation</td><td>Public security</td><td>Cross-session access remains denied</td><td>Test output</td></tr><tr><td>Stable webhook</td><td>Stripe test</td><td>Signed callback reaches correct environment once</td><td>Redacted evidence</td></tr><tr><td>Replay-only rollback</td><td>Operational</td><td>Admission stops; submitted attempts still reconcile</td><td>Rehearsal report</td></tr><tr><td>Portfolio link</td><td>Browser</td><td>Reviewed link and claims match released artifact</td><td>Preview/public evidence</td></tr></tbody></table></div>
+<h2 id="change-log">Change log</h2>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Change</th><th>Reason</th><th>PR/commit</th><th>Docs/tests affected</th></tr></thead><tbody><tr><td>2026-09-08</td><td>Created phase packet</td><td>Establish Markdown/HTML phase pair before implementation</td><td>pending</td><td>This record</td></tr></tbody></table></div>
+<h2 id="exit-gate-review">Exit gate review</h2>
+<ul><li class="task"><input type="checkbox" disabled>Owner approved publication and exact external changes.</li><li class="task"><input type="checkbox" disabled>Public journey, DNS, TLS, callback, isolation, and fallback smoke checks pass.</li><li class="task"><input type="checkbox" disabled>Operating limits, monitoring, and incident ownership are active.</li><li class="task"><input type="checkbox" disabled>No unresolved launch-critical attempt exists.</li><li class="task"><input type="checkbox" disabled>Portfolio link and public claims match verified evidence.</li><li class="task"><input type="checkbox" disabled>Replay-only rollback is tested and preserves reconciliation.</li><li class="task"><input type="checkbox" disabled>Markdown and generated HTML phase records match.</li></ul>
+<h2 id="handoff">Handoff</h2>
+<p>Record release identifiers, owner approvals, monitoring window, known limitations, open non-critical issues, operational ownership, and the safe rollback point.</p></main>
+    <footer>Generated from <a href="phase-5-controlled-publication.md">phase-5-controlled-publication.md</a> by <code>npm run docs:phases</code>. Markdown is the editable source of truth.</footer>
+  </div>
+</body>
+</html>

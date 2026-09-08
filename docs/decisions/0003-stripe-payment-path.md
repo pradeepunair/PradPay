@@ -1,6 +1,6 @@
 # ADR-0003: Stripe test credential and ACP payment-handler path
 
-- Status: proposed; blocked on authenticated account spike
+- Status: proposed; sandbox verified, blocked on key rotation and SPT API spike
 - Date: 2026-09-08
 - Owner/reviewer: Pradeep Nair / pending
 
@@ -9,7 +9,8 @@
 ACP completion expects negotiated payment data. Stripe documents Shared Payment
 Tokens (SPTs), including a test helper that simulates a granted SPT and a
 PaymentIntent confirmation using that SPT, but labels agentic commerce/SPT as
-private preview. Documentation does not prove access for the owner's account.
+private preview. The dedicated `PradPay sandbox` is now verified, with no API
+activity or event destination, but dashboard access does not prove SPT entitlement.
 
 ## Options considered
 
@@ -28,9 +29,11 @@ an `spt_` value or substitute a PaymentMethod ID.
 
 ## Required spike
 
-- Owner signs in and identifies the intended isolated Stripe test/sandbox account.
-- Verify availability without copying keys into chat, Git, docs, logs, or model context.
-- Create one small fictional test payment with a stable idempotency key.
+- Rotate the standard test secret exposed through accessibility output and store
+  its replacement only in the isolated secret environment.
+- Test the SPT helper against the account using an explicitly pinned API version.
+- Create one USD 1.00 fictional test payment with a stable idempotency key.
+- Register the isolated HTTPS event destination and only the required payment/SPT events.
 - Receive and signature-verify a callback, recording only safe references.
 - Confirm no live-mode object and no real money movement.
 

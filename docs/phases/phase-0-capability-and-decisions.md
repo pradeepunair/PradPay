@@ -54,8 +54,10 @@ specific documented blocker that leaves Guided Replay unblocked.
 - [ ] Remove or retain spike resources according to the documented test policy.
 - [ ] Record only safe provider references and redacted evidence.
 
-Stripe Dashboard access currently stops at login. The payment spike must not
-start until the owner signs in and confirms the intended sandbox/test account.
+The dedicated `PradPay sandbox` and Workbench are verified. No API activity or
+event destination exists. The existing standard test secret was exposed through
+browser accessibility output and must be rotated before use. SPT entitlement is
+still unverified because it requires a controlled test-helper API call.
 
 ### Durable execution
 
@@ -102,6 +104,7 @@ selected yet.
 | --- | --- | --- | --- | --- |
 | Repository/platform inventory | Local repositories + Vercel `prad7` | `docs/phase-0-environment-inventory.md` | partial; cloud resources still required | Codex / 2026-09-08 |
 | ACP schema/contract spike | Temporary upstream checkout | `protocol/acp/manifest.json`; `docs/acp-compatibility.md` | protocol snapshot passed | Codex / 2026-09-08 |
+| Stripe account readiness | Authenticated `PradPay sandbox` | `docs/phase-0-environment-inventory.md` | partial; key rotation, callback, and SPT API test required | Codex / 2026-09-08 |
 | Stripe test payment | — | — | pending | — |
 | Verified webhook callback | — | — | pending | — |
 | Durable workflow recovery spike | — | — | pending | — |
@@ -123,3 +126,7 @@ Choose exactly one:
 Before closing, add Phase 1-5 estimates based on verified scope and capacity;
 update architecture/data-flow diagrams; link accepted ADRs; and record every
 unresolved assumption, cost, and owner authorization needed next.
+
+### Documentation parity
+
+- [ ] Markdown and generated HTML phase records match and HTML is visually reviewed.

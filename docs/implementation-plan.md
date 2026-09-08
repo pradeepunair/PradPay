@@ -29,7 +29,8 @@ out of scope.
    payment, and order state.
 4. Unknown payment outcomes are reconciled; they are never converted to failure
    merely to simplify the UI.
-5. Every phase has a runnable outcome, an explicit gate, and updated documents.
+5. Every phase has a runnable outcome, an explicit gate, and updated Markdown
+   plus generated HTML documentation.
 6. Calendar estimates are created only after Phase 0 resolves capability and
    ownership facts. Until then, sequence is committed but dates are not.
 
@@ -282,3 +283,7 @@ A change that affects money, authority, protocol compatibility, payment state,
 evidence, privacy, or deployment boundaries requires an ADR. Adding work to a
 phase requires identifying the displaced work or changing the exit decision; a
 date must not be preserved by silently weakening a hard gate.
+
+Every phase record is maintained in Markdown and generated as self-contained
+HTML with `npm run docs:phases`. Both formats are committed together, and
+`npm run docs:phases:check` is part of every phase gate.

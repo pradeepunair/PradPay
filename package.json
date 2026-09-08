@@ -1,0 +1,9 @@
+{
+  "name": "paymentlab-ai",
+  "private": true,
+  "scripts": {
+    "docs:phases": "node scripts/build-phase-html.mjs",
+    "docs:phases:validate": "node scripts/check-phase-html.mjs",
+    "docs:phases:check": "npm run docs:phases && npm run docs:phases:validate && git diff --exit-code -- docs/phases"
+  }
+}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Phase 3 — Stripe test sale and resilient recovery, generated from the maintained Markdown phase record.">
+  <title>Phase 3 — Stripe test sale and resilient recovery · PaymentLab AI</title>
+  <style>
+  :root { color-scheme: light; --ink:#162a3a; --muted:#5f7180; --line:#c9d7df; --paper:#fff; --wash:#eef6f7; --accent:#176b73; --accent-2:#dff3ee; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; color:var(--ink); background:#f5f8f9; font:16px/1.62 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  a { color:#075e68; text-underline-offset:.16em; }
+  .shell { max-width:1120px; margin:0 auto; padding:24px; }
+  .topbar { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:18px; }
+  .brand { font-weight:800; letter-spacing:.02em; text-decoration:none; color:var(--ink); }
+  nav { display:flex; gap:8px; flex-wrap:wrap; }
+  nav a { padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:var(--paper); text-decoration:none; font-size:.88rem; }
+  main { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(24px,5vw,60px); box-shadow:0 16px 50px rgba(27,61,73,.08); }
+  h1,h2,h3,h4 { line-height:1.18; letter-spacing:-.02em; scroll-margin-top:20px; }
+  h1 { font-size:clamp(2rem,5vw,3.6rem); max-width:20ch; margin-top:0; }
+  h2 { margin-top:2.4em; padding-top:.5em; border-top:1px solid var(--line); }
+  h3 { margin-top:1.8em; color:var(--accent); }
+  p,li { max-width:82ch; }
+  code { padding:.12em .32em; border-radius:5px; background:var(--wash); font-size:.92em; }
+  pre { overflow:auto; padding:18px; border-radius:12px; color:#e8f4f4; background:#102a34; }
+  pre code { padding:0; color:inherit; background:transparent; }
+  .table-wrap { overflow-x:auto; margin:1.2rem 0; }
+  table { width:100%; border-collapse:collapse; min-width:680px; }
+  th,td { padding:10px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+  th { background:var(--wash); font-size:.9rem; }
+  .task { list-style:none; margin-left:-1.3rem; }
+  input[type=checkbox] { margin-right:.65rem; accent-color:var(--accent); }
+  blockquote { margin:1.2rem 0; padding:.3rem 1rem; border-left:4px solid var(--accent); background:var(--accent-2); }
+  footer { padding:18px 4px 40px; color:var(--muted); font-size:.88rem; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; }
+  .card { padding:20px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+  .card h2 { border:0; margin:.2rem 0 .6rem; padding:0; font-size:1.2rem; }
+  .status { color:var(--muted); font-size:.9rem; }
+  @media (max-width:640px) { .shell { padding:12px; } main { border-radius:12px; padding:22px; } }
+  @media print { body { background:#fff; } .shell { max-width:none; padding:0; } .topbar { display:none; } main { border:0; box-shadow:none; padding:0; } a { color:inherit; } }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="index.html">PaymentLab AI · Phase documentation</a>
+      <nav aria-label="Phase navigation"><a href="index.html">Index</a><a href="phase-0-capability-and-decisions.html">Phase 0</a><a href="phase-1-domain-and-guided-replay.html">Phase 1</a><a href="phase-2-durable-agents-and-acp.html">Phase 2</a><a href="phase-3-stripe-sale-and-recovery.html">Phase 3</a><a href="phase-4-portfolio-ready-release.html">Phase 4</a><a href="phase-5-controlled-publication.html">Phase 5</a></nav>
+    </header>
+    <main><h1 id="phase-3-stripe-test-sale-and-resilient-recovery">Phase 3 — Stripe test sale and resilient recovery</h1>
+<ul><li>Status: not started</li><li>Owner: Pradeep Nair</li><li>Start date: pending Phase 2 gate and Stripe capability approval</li><li>Gate review date: pending</li><li>PRD milestone: Milestone 3</li><li>Applicable acceptance checks: A04, A07-A17, A19-A24, A26-A28</li></ul>
+<h2 id="outcome">Outcome</h2>
+<p>One explicitly authorized mandate produces at most one Stripe test-mode sale and one confirmed order. Refusal, duplicate, crash, callback-ordering, and ambiguous response paths remain safe and visibly evidence-grounded.</p>
+<h2 id="entry-conditions">Entry conditions</h2>
+<ul><li>Phase 2 authority reservation and no-payment boundary pass.</li><li>ADR-0003 is accepted from an authenticated Stripe test-account spike.</li><li>Stable test callback, secret ownership, rotation, and environment checks exist.</li><li>Kill switch and budgets preserve reconciliation of submitted attempts.</li></ul>
+<h2 id="scope">Scope</h2>
+<h3 id="included">Included</h3>
+<ul><li>Stripe-hosted test payment setup with explicit setup consent and backend-held references.</li><li>Atomic mandate reservation plus stable order, payment, and attempt records before submission.</li><li>Automatic-capture test submission with deterministic idempotency key and request hash.</li><li>Raw-body signature verification, durable receipt, deduplication, asynchronous apply, and out-of-order tolerance.</li><li>Unknown-state reconciliation by known provider reference or safe same-key recovery.</li><li>Allowlisted uncertain-response injection after a real test mutation.</li><li>Clear unresolved, requires-action, failed, and confirmed experience states.</li></ul>
+<h3 id="explicitly-excluded">Explicitly excluded</h3>
+<ul><li>Live-mode keys, real money, real identities, refunds, disputes, subscriptions, payouts, multi-PSP routing, or real fulfillment.</li><li>Confirmation based only on model text, redirect state, or unverified browser input.</li></ul>
+<h2 id="component-changes">Component changes</h2>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>Change</th><th>Contract/migration impact</th><th>Tests</th><th>Documentation updated</th></tr></thead><tbody><tr><td>Payment setup</td><td>Add consented Stripe test credential flow</td><td>Payment reference contract</td><td>Browser/integration</td><td>Design and ACP compatibility</td></tr><tr><td>Payment gate</td><td>Add atomic dispatch fencing</td><td>Mandate/attempt migrations</td><td>Race tests</td><td>Data model</td></tr><tr><td>Stripe adapter</td><td>Add stable submission and lookup/recovery</td><td>Provider adapter v1</td><td>Integration</td><td>ADR-0003</td></tr><tr><td>Webhook endpoint</td><td>Add raw verification and durable receipt</td><td>Receipt schema</td><td>Signature/order tests</td><td>Data flow and runbook</td></tr><tr><td>Reconciler</td><td>Add unknown-state recovery horizon</td><td>Attempt transitions/jobs</td><td>Crash/timeout tests</td><td>Architecture</td></tr><tr><td>Evidence projection</td><td>Add verified payment/order evidence</td><td>Safe event fields</td><td>Redaction tests</td><td>ADR-0006</td></tr></tbody></table></div>
+<h2 id="flow-changes">Flow changes</h2>
+<ul><li>Update <a href="../architecture.md">architecture</a> with Stripe, webhook, and reconciliation paths.</li><li>Update <a href="../design-flow.md">experience flows</a> for setup consent and unresolved outcomes.</li><li>Update <a href="../data-flow.md">data flows</a> for submission, callback, lookup, and same-key recovery.</li><li>Update <a href="../data-model.md">data model</a> with physical payment constraints and transitions.</li><li>Complete the payment section and approved label in <a href="../acp-compatibility.md">ACP compatibility</a>.</li></ul>
+<h2 id="decisions-and-risks">Decisions and risks</h2>
+<div class="table-wrap"><table><thead><tr><th>Item</th><th>Type</th><th>Owner</th><th>Resolution/evidence</th></tr></thead><tbody><tr><td>ACP/Stripe credential path</td><td>Decision</td><td>Pradeep</td><td>Accepted ADR-0003 and test evidence</td></tr><tr><td>Double submission</td><td>Critical risk</td><td>Engineering</td><td>Atomic fencing, uniqueness, provider idempotency</td></tr><tr><td>Unknown provider outcome</td><td>Critical risk</td><td>Engineering</td><td>No new attempt; lookup/same-key reconciliation</td></tr><tr><td>Forged/duplicate webhook</td><td>Security risk</td><td>Engineering</td><td>Signature verification and unique provider event ID</td></tr><tr><td>Test/live confusion</td><td>Security risk</td><td>Operations</td><td>Fail-closed startup and object-mode assertions</td></tr></tbody></table></div>
+<h2 id="verification-plan">Verification plan</h2>
+<div class="table-wrap"><table><thead><tr><th>Check</th><th>Layer/environment</th><th>Expected result</th><th>Evidence</th></tr></thead><tbody><tr><td>Unauthorized submission</td><td>Integration</td><td>Zero Stripe submission calls</td><td>Test output</td></tr><tr><td>Concurrent completion</td><td>Integration</td><td>One attempt and at most one successful charge</td><td>Concurrency report</td></tr><tr><td>Invalid/duplicate callback</td><td>Integration</td><td>Invalid rejected; duplicate has one business effect</td><td>Webhook report</td></tr><tr><td>Callback before API response</td><td>Integration</td><td>Terminal truth is monotonic and evidence-backed</td><td>Event trace</td></tr><tr><td>Timeout/unknown recovery</td><td>Fault-injection</td><td>Reconcile without creating a new attempt</td><td>Provider-safe trace</td></tr><tr><td>Real test sale</td><td>Deployed smoke</td><td>One tiny test payment and confirmed order</td><td>Redacted evidence reference</td></tr></tbody></table></div>
+<h2 id="change-log">Change log</h2>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Change</th><th>Reason</th><th>PR/commit</th><th>Docs/tests affected</th></tr></thead><tbody><tr><td>2026-09-08</td><td>Created phase packet</td><td>Establish Markdown/HTML phase pair before implementation</td><td>pending</td><td>This record</td></tr></tbody></table></div>
+<h2 id="exit-gate-review">Exit gate review</h2>
+<ul><li class="task"><input type="checkbox" disabled>One mandate yields at most one successful test payment and confirmed order.</li><li class="task"><input type="checkbox" disabled>Invalid authority cannot reach Stripe.</li><li class="task"><input type="checkbox" disabled>Callback and provider lookup are the only confirmation evidence sources.</li><li class="task"><input type="checkbox" disabled>Unknown outcomes reconcile without a new attempt.</li><li class="task"><input type="checkbox" disabled>Crash, duplicate, ordering, and signature tests pass.</li><li class="task"><input type="checkbox" disabled>Applicable A01-A28 rows link repeatable, redacted evidence.</li><li class="task"><input type="checkbox" disabled>Runbook, diagrams, contracts, threat model, and compatibility label are current.</li><li class="task"><input type="checkbox" disabled>Markdown and generated HTML phase records match.</li></ul>
+<h2 id="handoff">Handoff</h2>
+<p>Record safe Stripe references, unresolved attempts, reconciliation ownership, credential rotation status, rollback-to-replay procedure, and Phase 4 entry conditions.</p></main>
+    <footer>Generated from <a href="phase-3-stripe-sale-and-recovery.md">phase-3-stripe-sale-and-recovery.md</a> by <code>npm run docs:phases</code>. Markdown is the editable source of truth.</footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Phase 2 — durable agents and ACP checkout, generated from the maintained Markdown phase record.">
+  <title>Phase 2 — durable agents and ACP checkout · PaymentLab AI</title>
+  <style>
+  :root { color-scheme: light; --ink:#162a3a; --muted:#5f7180; --line:#c9d7df; --paper:#fff; --wash:#eef6f7; --accent:#176b73; --accent-2:#dff3ee; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; color:var(--ink); background:#f5f8f9; font:16px/1.62 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  a { color:#075e68; text-underline-offset:.16em; }
+  .shell { max-width:1120px; margin:0 auto; padding:24px; }
+  .topbar { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:18px; }
+  .brand { font-weight:800; letter-spacing:.02em; text-decoration:none; color:var(--ink); }
+  nav { display:flex; gap:8px; flex-wrap:wrap; }
+  nav a { padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:var(--paper); text-decoration:none; font-size:.88rem; }
+  main { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(24px,5vw,60px); box-shadow:0 16px 50px rgba(27,61,73,.08); }
+  h1,h2,h3,h4 { line-height:1.18; letter-spacing:-.02em; scroll-margin-top:20px; }
+  h1 { font-size:clamp(2rem,5vw,3.6rem); max-width:20ch; margin-top:0; }
+  h2 { margin-top:2.4em; padding-top:.5em; border-top:1px solid var(--line); }
+  h3 { margin-top:1.8em; color:var(--accent); }
+  p,li { max-width:82ch; }
+  code { padding:.12em .32em; border-radius:5px; background:var(--wash); font-size:.92em; }
+  pre { overflow:auto; padding:18px; border-radius:12px; color:#e8f4f4; background:#102a34; }
+  pre code { padding:0; color:inherit; background:transparent; }
+  .table-wrap { overflow-x:auto; margin:1.2rem 0; }
+  table { width:100%; border-collapse:collapse; min-width:680px; }
+  th,td { padding:10px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+  th { background:var(--wash); font-size:.9rem; }
+  .task { list-style:none; margin-left:-1.3rem; }
+  input[type=checkbox] { margin-right:.65rem; accent-color:var(--accent); }
+  blockquote { margin:1.2rem 0; padding:.3rem 1rem; border-left:4px solid var(--accent); background:var(--accent-2); }
+  footer { padding:18px 4px 40px; color:var(--muted); font-size:.88rem; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; }
+  .card { padding:20px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+  .card h2 { border:0; margin:.2rem 0 .6rem; padding:0; font-size:1.2rem; }
+  .status { color:var(--muted); font-size:.9rem; }
+  @media (max-width:640px) { .shell { padding:12px; } main { border-radius:12px; padding:22px; } }
+  @media print { body { background:#fff; } .shell { max-width:none; padding:0; } .topbar { display:none; } main { border:0; box-shadow:none; padding:0; } a { color:inherit; } }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="index.html">PaymentLab AI · Phase documentation</a>
+      <nav aria-label="Phase navigation"><a href="index.html">Index</a><a href="phase-0-capability-and-decisions.html">Phase 0</a><a href="phase-1-domain-and-guided-replay.html">Phase 1</a><a href="phase-2-durable-agents-and-acp.html">Phase 2</a><a href="phase-3-stripe-sale-and-recovery.html">Phase 3</a><a href="phase-4-portfolio-ready-release.html">Phase 4</a><a href="phase-5-controlled-publication.html">Phase 5</a></nav>
+    </header>
+    <main><h1 id="phase-2-durable-agents-and-acp-checkout">Phase 2 — durable agents and ACP checkout</h1>
+<ul><li>Status: not started</li><li>Owner: Pradeep Nair</li><li>Start date: pending Phase 1 gate</li><li>Gate review date: pending</li><li>PRD milestone: Milestone 2</li><li>Applicable acceptance checks: A02-A12, A18-A21, A23-A27</li></ul>
+<h2 id="outcome">Outcome</h2>
+<p>Bounded Buyer and Merchant agents create a server-validated ACP checkout and the durable workflow pauses at explicit purchase authority. No path can dispatch a payment during this phase.</p>
+<h2 id="entry-conditions">Entry conditions</h2>
+<ul><li>Phase 1 event, projection, and state contracts are accepted.</li><li>ACP <code>2026-04-17</code> artifacts and compatibility boundary remain pinned.</li><li>Workflow, database, and model-provider spikes pass their required Phase 0 gates.</li><li>Server-side agent role and tool boundaries are approved.</li></ul>
+<h2 id="scope">Scope</h2>
+<h3 id="included">Included</h3>
+<ul><li>Opaque sessions, run ownership, CSRF/origin checks, atomic admission limits, reconnect, and expiration.</li><li>Durable workflow, transactional outbox, retries, leases/fencing, event sequence, and permission wait/resume.</li><li>Separate Buyer/Merchant prompts, structured outputs, role tool allowlists, budgets, validation, and safe execution records.</li><li>Merchant catalog, stock, offer, quote, and reservation services.</li><li>Pinned ACP server surface, client adapter, authentication, version mapping, run scoping, generated types, fixtures, and contract tests.</li><li>Mission normalization, explicit confirmation, grant/revise/revoke/expire flows, and atomic authority reservation.</li><li>SSE committed-event stream with cursor catch-up and polling fallback.</li></ul>
+<h3 id="explicitly-excluded">Explicitly excluded</h3>
+<ul><li>Stripe credential setup, PaymentIntent creation, or any PSP mutation.</li><li>Order confirmation or claims of payment success.</li><li>Broader ACP operations beyond the documented MVP subset.</li></ul>
+<h2 id="component-changes">Component changes</h2>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>Change</th><th>Contract/migration impact</th><th>Tests</th><th>Documentation updated</th></tr></thead><tbody><tr><td>Session/run API</td><td>Add ownership and admission boundary</td><td>Session/run API v1</td><td>Security/integration</td><td>Architecture and threat model</td></tr><tr><td>Workflow/outbox</td><td>Add durable orchestration and permission hook</td><td>Workflow/event migrations</td><td>Recovery tests</td><td>Data flow and ADR-0004</td></tr><tr><td>Agent adapters</td><td>Add isolated Buyer/Merchant tool loops</td><td>Prompt/tool schema versions</td><td>Adversarial tests</td><td>Agent contract record</td></tr><tr><td>Merchant services</td><td>Add deterministic catalog through reservation</td><td>Domain service contracts</td><td>Unit/integration</td><td>Data model</td></tr><tr><td>ACP adapter/server</td><td>Implement pinned checkout subset</td><td>ACP <code>2026-04-17</code> types/routes</td><td>Contract tests</td><td>ACP compatibility</td></tr><tr><td>Consent gate</td><td>Add mandate lifecycle and atomic reservation</td><td>Mandate tables/states</td><td>Race/expiry tests</td><td>Design and data flows</td></tr><tr><td>Event feed</td><td>Add SSE plus catch-up/poll fallback</td><td>Projection/cursor contract</td><td>Reconnect tests</td><td>Architecture</td></tr></tbody></table></div>
+<h2 id="flow-changes">Flow changes</h2>
+<ul><li>Update <a href="../architecture.md">architecture</a> with workflow, agent, tool, ACP, and consent boundaries.</li><li>Update <a href="../design-flow.md">experience flows</a> for mission confirmation and mandate lifecycle.</li><li>Update <a href="../data-flow.md">data flows</a> for outbox dispatch, waits, and committed event streaming.</li><li>Update <a href="../data-model.md">data model</a> for sessions, runs, reservations, mandates, and executions.</li><li>Complete the non-payment sections of <a href="../acp-compatibility.md">ACP compatibility</a>.</li></ul>
+<h2 id="decisions-and-risks">Decisions and risks</h2>
+<div class="table-wrap"><table><thead><tr><th>Item</th><th>Type</th><th>Owner</th><th>Resolution/evidence</th></tr></thead><tbody><tr><td>Model/provider selection</td><td>Decision</td><td>Pradeep</td><td>Accept ADR-0005 after spike</td></tr><tr><td>Agent prompt injection</td><td>Security risk</td><td>Engineering</td><td>Role allowlists plus adversarial suite</td></tr><tr><td>Workflow replay/version drift</td><td>Reliability risk</td><td>Engineering</td><td>Suspended-run deployment test</td></tr><tr><td>Duplicate run/grant races</td><td>Correctness risk</td><td>Engineering</td><td>Transactions, uniqueness, and concurrency tests</td></tr></tbody></table></div>
+<h2 id="verification-plan">Verification plan</h2>
+<div class="table-wrap"><table><thead><tr><th>Check</th><th>Layer/environment</th><th>Expected result</th><th>Evidence</th></tr></thead><tbody><tr><td>Cross-session access</td><td>Integration</td><td>No read, stream, or mutation crosses ownership</td><td>Test output</td></tr><tr><td>Admission and grant races</td><td>Integration</td><td>Limits and one authority reservation remain atomic</td><td>Concurrency report</td></tr><tr><td>Workflow crash/reconnect</td><td>Deployed spike</td><td>Resume from committed state without duplicate effects</td><td>Workflow evidence</td></tr><tr><td>Agent tool isolation</td><td>Agent/security</td><td>Buyer and Merchant cannot invoke the other's tools</td><td>Adversarial report</td></tr><tr><td>ACP request/response contracts</td><td>Contract</td><td>Implemented subset matches pinned schemas</td><td>Contract report</td></tr><tr><td>No-payment boundary</td><td>Static/integration</td><td>No Phase 2 route or tool can reach PSP submission</td><td>Test output</td></tr></tbody></table></div>
+<h2 id="change-log">Change log</h2>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Change</th><th>Reason</th><th>PR/commit</th><th>Docs/tests affected</th></tr></thead><tbody><tr><td>2026-09-08</td><td>Created phase packet</td><td>Establish Markdown/HTML phase pair before implementation</td><td>pending</td><td>This record</td></tr></tbody></table></div>
+<h2 id="exit-gate-review">Exit gate review</h2>
+<ul><li class="task"><input type="checkbox" disabled>Agents reach a validated, reserved, versioned ACP checkout.</li><li class="task"><input type="checkbox" disabled>Workflow pauses and resumes durably at permission.</li><li class="task"><input type="checkbox" disabled>Session, run, role, and tool isolation tests pass.</li><li class="task"><input type="checkbox" disabled>ACP compatibility claims match contract evidence.</li><li class="task"><input type="checkbox" disabled>No code path can dispatch a payment.</li><li class="task"><input type="checkbox" disabled>Applicable A01-A28 rows link repeatable evidence.</li><li class="task"><input type="checkbox" disabled>Component, flow, contract, and threat-model documents are current.</li><li class="task"><input type="checkbox" disabled>Markdown and generated HTML phase records match.</li></ul>
+<h2 id="handoff">Handoff</h2>
+<p>Record accepted prompt/tool/ACP versions, suspended workflows, open defects, rollback instructions, and the exact Phase 3 payment enablement conditions.</p></main>
+    <footer>Generated from <a href="phase-2-durable-agents-and-acp.md">phase-2-durable-agents-and-acp.md</a> by <code>npm run docs:phases</code>. Markdown is the editable source of truth.</footer>
+  </div>
+</body>
+</html>

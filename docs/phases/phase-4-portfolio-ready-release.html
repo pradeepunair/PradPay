@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Phase 4 — portfolio-ready release, generated from the maintained Markdown phase record.">
+  <title>Phase 4 — portfolio-ready release · PaymentLab AI</title>
+  <style>
+  :root { color-scheme: light; --ink:#162a3a; --muted:#5f7180; --line:#c9d7df; --paper:#fff; --wash:#eef6f7; --accent:#176b73; --accent-2:#dff3ee; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; color:var(--ink); background:#f5f8f9; font:16px/1.62 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  a { color:#075e68; text-underline-offset:.16em; }
+  .shell { max-width:1120px; margin:0 auto; padding:24px; }
+  .topbar { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:18px; }
+  .brand { font-weight:800; letter-spacing:.02em; text-decoration:none; color:var(--ink); }
+  nav { display:flex; gap:8px; flex-wrap:wrap; }
+  nav a { padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:var(--paper); text-decoration:none; font-size:.88rem; }
+  main { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(24px,5vw,60px); box-shadow:0 16px 50px rgba(27,61,73,.08); }
+  h1,h2,h3,h4 { line-height:1.18; letter-spacing:-.02em; scroll-margin-top:20px; }
+  h1 { font-size:clamp(2rem,5vw,3.6rem); max-width:20ch; margin-top:0; }
+  h2 { margin-top:2.4em; padding-top:.5em; border-top:1px solid var(--line); }
+  h3 { margin-top:1.8em; color:var(--accent); }
+  p,li { max-width:82ch; }
+  code { padding:.12em .32em; border-radius:5px; background:var(--wash); font-size:.92em; }
+  pre { overflow:auto; padding:18px; border-radius:12px; color:#e8f4f4; background:#102a34; }
+  pre code { padding:0; color:inherit; background:transparent; }
+  .table-wrap { overflow-x:auto; margin:1.2rem 0; }
+  table { width:100%; border-collapse:collapse; min-width:680px; }
+  th,td { padding:10px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+  th { background:var(--wash); font-size:.9rem; }
+  .task { list-style:none; margin-left:-1.3rem; }
+  input[type=checkbox] { margin-right:.65rem; accent-color:var(--accent); }
+  blockquote { margin:1.2rem 0; padding:.3rem 1rem; border-left:4px solid var(--accent); background:var(--accent-2); }
+  footer { padding:18px 4px 40px; color:var(--muted); font-size:.88rem; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; }
+  .card { padding:20px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+  .card h2 { border:0; margin:.2rem 0 .6rem; padding:0; font-size:1.2rem; }
+  .status { color:var(--muted); font-size:.9rem; }
+  @media (max-width:640px) { .shell { padding:12px; } main { border-radius:12px; padding:22px; } }
+  @media print { body { background:#fff; } .shell { max-width:none; padding:0; } .topbar { display:none; } main { border:0; box-shadow:none; padding:0; } a { color:inherit; } }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="index.html">PaymentLab AI · Phase documentation</a>
+      <nav aria-label="Phase navigation"><a href="index.html">Index</a><a href="phase-0-capability-and-decisions.html">Phase 0</a><a href="phase-1-domain-and-guided-replay.html">Phase 1</a><a href="phase-2-durable-agents-and-acp.html">Phase 2</a><a href="phase-3-stripe-sale-and-recovery.html">Phase 3</a><a href="phase-4-portfolio-ready-release.html">Phase 4</a><a href="phase-5-controlled-publication.html">Phase 5</a></nav>
+    </header>
+    <main><h1 id="phase-4-portfolio-ready-release">Phase 4 — portfolio-ready release</h1>
+<ul><li>Status: not started</li><li>Owner: Pradeep Nair</li><li>Start date: pending Phase 3 gate</li><li>Gate review date: pending</li><li>PRD milestone: Milestone 4</li><li>Applicable acceptance checks: A01-A28</li></ul>
+<h2 id="outcome">Outcome</h2>
+<p>A preview deployment is safe, understandable, measurable, accessible, and ready for owner review. Sanitized integrated recordings, accurate compatibility labels, operational controls, and rollback documentation match the running system.</p>
+<h2 id="entry-conditions">Entry conditions</h2>
+<ul><li>Phase 3 integrated sale and recovery gate passes with no launch-critical unresolved attempt.</li><li>Preview environment, callback, database, workflow, and model limits are measurable.</li><li>Publication remains unauthorized; this phase prepares but does not publish.</li></ul>
+<h2 id="scope">Scope</h2>
+<h3 id="included">Included</h3>
+<ul><li>Capture successful, blocked, and uncertain integrated runs; sanitize and version recordings.</li><li>Metrics with population, sample size, source, conditions, and replay/live separation.</li><li>Case study, limitations, architecture summary, accurate ACP label, and attribution.</li><li>Persisted limits, kill switch, retention/cleanup, unresolved diagnostics, secret rotation, health checks, security headers, and CSP.</li><li>README, environment guide, migrations, local webhook guide, deployment and incident runbooks.</li><li>Preview accessibility, responsive, performance, privacy, redaction, and compatibility review.</li><li>A portfolio-card proposal only; no portfolio change or merge.</li></ul>
+<h3 id="explicitly-excluded">Explicitly excluded</h3>
+<ul><li>Public production publication, DNS changes, portfolio merge, or enabling anonymous live admission.</li><li>Unsupported claims, invented metrics, or removal of product limitations.</li></ul>
+<h2 id="component-changes">Component changes</h2>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>Change</th><th>Contract/migration impact</th><th>Tests</th><th>Documentation updated</th></tr></thead><tbody><tr><td>Recordings</td><td>Replace release fixtures with sanitized integrated evidence</td><td>Recording version bump</td><td>Schema/redaction</td><td>Replay docs</td></tr><tr><td>Metrics</td><td>Add labeled replay/live measurements</td><td>Metrics schema</td><td>Accuracy review</td><td>Case study</td></tr><tr><td>Operations</td><td>Add persisted controls, health, retention, and diagnostics</td><td>Admin/runbook contracts</td><td>Recovery/smoke</td><td>Runbooks</td></tr><tr><td>Security layer</td><td>Add headers, CSP, rotation checks, and secret scan</td><td>Deployment config</td><td>Security suite</td><td>Threat model</td></tr><tr><td>Product content</td><td>Add limitations, attribution, compatibility, case study</td><td>Public copy</td><td>Content review</td><td>README</td></tr><tr><td>Preview deployment</td><td>Produce reviewable release candidate</td><td>Environment/migration record</td><td>Full smoke</td><td>Release record</td></tr></tbody></table></div>
+<h2 id="flow-changes">Flow changes</h2>
+<ul><li>Update <a href="../architecture.md">architecture</a> with deployed environments and operational controls.</li><li>Update <a href="../design-flow.md">experience flows</a> with final labels, errors, and accessible behavior.</li><li>Update <a href="../data-flow.md">data flows</a> with recording sanitization and retention.</li><li>Update <a href="../data-model.md">data model</a> with final migrations and cleanup ownership.</li><li>Resolve every row in <a href="../traceability.md">acceptance traceability</a>.</li></ul>
+<h2 id="decisions-and-risks">Decisions and risks</h2>
+<div class="table-wrap"><table><thead><tr><th>Item</th><th>Type</th><th>Owner</th><th>Resolution/evidence</th></tr></thead><tbody><tr><td>Recording publication safety</td><td>Privacy risk</td><td>Pradeep</td><td>Automated scan plus human review</td></tr><tr><td>Metrics interpretation</td><td>Product risk</td><td>Pradeep</td><td>Definitions, denominators, and conditions shown</td></tr><tr><td>Kill-switch semantics</td><td>Reliability risk</td><td>Engineering</td><td>Stop admission while reconciliation continues</td></tr><tr><td>Preview-to-public drift</td><td>Release risk</td><td>Operations</td><td>Immutable build and migration record</td></tr></tbody></table></div>
+<h2 id="verification-plan">Verification plan</h2>
+<div class="table-wrap"><table><thead><tr><th>Check</th><th>Layer/environment</th><th>Expected result</th><th>Evidence</th></tr></thead><tbody><tr><td>A01-A28 traceability</td><td>Review</td><td>Every check passed, intentionally deferred, or owner-blocked</td><td>Traceability matrix</td></tr><tr><td>Recording redaction</td><td>Automated/manual</td><td>No secrets, tokens, hidden reasoning, or private costs</td><td>Scan and approval</td></tr><tr><td>Preview smoke</td><td>Deployed browser</td><td>Replay and authorized live scenarios work</td><td>Smoke report</td></tr><tr><td>Accessibility/responsive</td><td>Automated/manual</td><td>Required journeys pass target standard</td><td>Audit evidence</td></tr><tr><td>Security/privacy</td><td>Automated/manual</td><td>Headers, CSP, isolation, retention, and secret checks pass</td><td>Review report</td></tr><tr><td>Replay-only rollback</td><td>Operational rehearsal</td><td>New live admission stops; pending reconciliation continues</td><td>Runbook evidence</td></tr></tbody></table></div>
+<h2 id="change-log">Change log</h2>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Change</th><th>Reason</th><th>PR/commit</th><th>Docs/tests affected</th></tr></thead><tbody><tr><td>2026-09-08</td><td>Created phase packet</td><td>Establish Markdown/HTML phase pair before implementation</td><td>pending</td><td>This record</td></tr></tbody></table></div>
+<h2 id="exit-gate-review">Exit gate review</h2>
+<ul><li class="task"><input type="checkbox" disabled>A01-A28 has an explicit evidence-backed disposition.</li><li class="task"><input type="checkbox" disabled>Preview smoke, security, privacy, accessibility, and performance reviews pass.</li><li class="task"><input type="checkbox" disabled>Recordings and metrics are sanitized, versioned, and accurately labeled.</li><li class="task"><input type="checkbox" disabled>Operations, incidents, retention, rotation, and rollback are documented and rehearsed.</li><li class="task"><input type="checkbox" disabled>Portfolio proposal contains no unsupported claim or unrelated change.</li><li class="task"><input type="checkbox" disabled>Owner has reviewed the preview; no public publication is inferred.</li><li class="task"><input type="checkbox" disabled>Markdown and generated HTML phase records match.</li></ul>
+<h2 id="handoff">Handoff</h2>
+<p>Record the immutable release candidate, migration state, operating limits, known limitations, rollback point, publication approvals still required, and Phase 5 entry conditions.</p></main>
+    <footer>Generated from <a href="phase-4-portfolio-ready-release.md">phase-4-portfolio-ready-release.md</a> by <code>npm run docs:phases</code>. Markdown is the editable source of truth.</footer>
+  </div>
+</body>
+</html>

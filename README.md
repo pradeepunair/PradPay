@@ -15,7 +15,13 @@ MVP will be delivered and verified:
 - [Logical data model and invariants](docs/data-model.md)
 - [Acceptance traceability](docs/traceability.md)
 - [Phase 0 capability work packet](docs/phases/phase-0-capability-and-decisions.md)
+- [Phase documentation index — Markdown](docs/phases/README.md)
+- [Phase documentation index — HTML](docs/phases/index.html)
 - [Documentation index and update rules](docs/README.md)
+
+Every Phase 0–5 packet is maintained in Markdown and generated as a
+self-contained HTML page. Run `npm run docs:phases` after editing a phase record
+and `npm run docs:phases:check` before committing.
 
 Guided Replay and Live Sandbox are separate modes. Replay is read-only. Live
 Sandbox, if the Phase 0 capability gate passes, uses bounded agents and Stripe

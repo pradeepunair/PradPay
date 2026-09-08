@@ -8,7 +8,8 @@ evidence replaces assumptions.
 
 The repository root also contains a self-contained
 [`PaymentLab-MVP-Implementation-Plan.html`](../PaymentLab-MVP-Implementation-Plan.html)
-for visual review and printing. Markdown remains the editable source of truth.
+for visual review and printing. Every phase also has a generated, self-contained
+HTML companion. Markdown remains the editable source of truth.
 
 ## Document map
 
@@ -26,6 +27,7 @@ for visual review and printing. Markdown remains the editable source of truth.
 | [Architecture decisions](decisions/README.md) | ADR register and decision-writing rules | Add an ADR before implementing a consequential choice |
 | [Phase record template](phases/PHASE-TEMPLATE.md) | Repeatable phase brief, change log, evidence, and handoff | Copy when a phase starts; close it at the exit review |
 | [Phase 0 work packet](phases/phase-0-capability-and-decisions.md) | Discovery checklist, evidence register, and gate review | Use as the active record when Phase 0 begins |
+| [Phase records and HTML index](phases/README.md) | Paired Markdown/HTML records for Phases 0–5 and generation commands | Regenerate and commit HTML with every phase Markdown change |
 
 ## Documentation-as-delivery rule
 
@@ -38,6 +40,10 @@ requires:
 4. Applicable A01-A28 rows linked to repeatable test evidence.
 5. Operational, security, privacy, and rollback impacts documented.
 6. The phase record closed with known limitations and the next-phase handoff.
+7. `npm run docs:phases:check` passes and the generated HTML is visually reviewed.
+
+Phase HTML is generated with `npm run docs:phases`; generated files must not be
+edited directly. Commit each phase's Markdown and HTML versions together.
 
 Sensitive values, full provider payloads, payment credentials, personal data,
 and hidden model reasoning do not belong in documentation or test evidence.

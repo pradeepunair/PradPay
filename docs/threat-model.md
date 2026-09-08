@@ -70,6 +70,9 @@ flowchart LR
 ## Residual risks requiring Phase 0 decisions
 
 - Stripe SPT availability is private-preview/account-dependent.
+- Browser/dashboard accessibility output can reveal test credentials even without
+  an explicit reveal action; inspected credentials must be rotated and credential
+  pages excluded from future automated capture.
 - Vercel Workflow is visible on the Hobby team, but deployed durability, data
   retention, replay semantics, and exact account limits are not yet proven.
 - Neon/Prisma is proposed, but no provider resource, region, or tier is selected;
