@@ -4,18 +4,17 @@ Create one numbered file per consequential decision, for example
 `0001-runtime-topology.md`. ADRs are immutable after acceptance except for status
 and links; superseding decisions get a new number.
 
-Required before Phase 0 closes:
+## Decision register
 
-- 0001 — runtime and deployment topology
-- 0002 — pinned ACP revision and compatibility boundary
-- 0003 — Stripe test credential/payment-handler path
-- 0004 — durable workflow and transactional dispatch
-
-Likely early decisions:
-
-- 0005 — model provider and structured-tool contract
-- 0006 — event schema, projection, and redaction policy
-- 0007 — physical database schema and typed ORM
+| ADR | Status | Decision |
+| --- | --- | --- |
+| [0001](0001-runtime-topology.md) | Proposed | Separate Vercel application with durable execution and Postgres |
+| [0002](0002-acp-version.md) | Accepted | Pin ACP `2026-04-17` at an exact upstream commit |
+| [0003](0003-stripe-payment-path.md) | Proposed; account spike blocked | Stripe test credential and ACP payment-handler path |
+| [0004](0004-durable-workflow.md) | Proposed | Vercel Workflow subject to a deployed durability spike |
+| [0005](0005-model-provider.md) | Proposed | Model provider and structured-tool boundary |
+| [0006](0006-event-projection-and-redaction.md) | Proposed | Append-only safe events with authorized projections |
+| [0007](0007-database-and-orm.md) | Proposed | Neon Postgres with Prisma ORM, subject to resource spike |
 
 ## ADR template
 

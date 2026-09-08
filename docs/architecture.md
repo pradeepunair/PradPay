@@ -132,14 +132,15 @@ reconciliation must survive browser closure and bounded function termination.
 
 ## Architecture decisions required before implementation
 
-| ADR | Decision | Evidence needed |
-| --- | --- | --- |
-| 001 | Runtime/deployment topology | Actual Vercel scope, callback reachability, database and environment separation |
-| 002 | ACP revision and supported surface | Release/schema hash, license, contract tests, capability negotiation |
-| 003 | Stripe credential/payment-handler boundary | Supported owner-account test flow and tiny end-to-end spike |
-| 004 | Durable workflow/outbox | Wait/retry/recovery proof, limits, operational ownership, cost |
-| 005 | Model provider and structured-tool contract | Supported schemas, usage reporting, timeout/retry behavior, data policy |
-| 006 | Event schema and projection/redaction policy | Replay compatibility, observer roles, safe evidence examples |
+| ADR | Status | Decision | Evidence still needed |
+| --- | --- | --- | --- |
+| [0001](decisions/0001-runtime-topology.md) | Proposed | Runtime/deployment topology | Callback reachability, database and environment separation |
+| [0002](decisions/0002-acp-version.md) | Accepted | ACP revision and supported surface | PaymentLab generated-type/contract tests in Phase 2 |
+| [0003](decisions/0003-stripe-payment-path.md) | Proposed; blocked | Stripe credential/payment-handler boundary | Supported owner-account test flow and tiny end-to-end spike |
+| [0004](decisions/0004-durable-workflow.md) | Proposed | Durable workflow/outbox | Wait/retry/recovery proof, limits, operational ownership, cost |
+| [0005](decisions/0005-model-provider.md) | Proposed | Model provider and structured-tool contract | Supported schemas, usage reporting, timeout/retry behavior, data policy |
+| [0006](decisions/0006-event-projection-and-redaction.md) | Proposed | Event schema and projection/redaction policy | Replay compatibility, observer roles, safe evidence examples |
+| [0007](decisions/0007-database-and-orm.md) | Proposed | Neon Postgres and Prisma ORM | Authorized resource plus transaction/migration/restore proof |
 
 ## Growth seams, not MVP promises
 

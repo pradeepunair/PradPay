@@ -1,6 +1,7 @@
 # Data model and invariants
 
-Status: logical model proposed; physical schema and ORM are Phase 0/1 decisions.
+Status: logical model proposed; Neon Postgres and Prisma ORM are proposed in
+[ADR-0007](decisions/0007-database-and-orm.md), pending a resource spike.
 
 ## Core relationships
 

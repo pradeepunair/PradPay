@@ -21,6 +21,8 @@ for visual review and printing. Markdown remains the editable source of truth.
 | [Data model](data-model.md) | Core records, relationships, state separation, and invariants | Update with every migration or state-machine change |
 | [Acceptance traceability](traceability.md) | Maps PRD checks A01-A28 to phases, test layers, and evidence | Update when a test is implemented or evidence is captured |
 | [ACP compatibility record](acp-compatibility.md) | Verified protocol revision, operations, handler, and credential boundary | Populate during Phase 0; update only from compatibility evidence |
+| [Phase 0 environment inventory](phase-0-environment-inventory.md) | Verified repository, platform, account, tool, and dependency facts | Update only from current read-only checks or executable evidence |
+| [Threat model](threat-model.md) | Assets, trust boundaries, abuse cases, controls, and validation | Revisit whenever a boundary, integration, or public capability changes |
 | [Architecture decisions](decisions/README.md) | ADR register and decision-writing rules | Add an ADR before implementing a consequential choice |
 | [Phase record template](phases/PHASE-TEMPLATE.md) | Repeatable phase brief, change log, evidence, and handoff | Copy when a phase starts; close it at the exit review |
 | [Phase 0 work packet](phases/phase-0-capability-and-decisions.md) | Discovery checklist, evidence register, and gate review | Use as the active record when Phase 0 begins |
