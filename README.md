@@ -8,6 +8,7 @@ Implementation has not started. The current repository additions define how the
 MVP will be delivered and verified:
 
 - [Phased MVP implementation plan](docs/implementation-plan.md)
+- [Visual HTML implementation blueprint](PaymentLab-MVP-Implementation-Plan.html)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Experience and design flows](docs/design-flow.md)
 - [Live, recovery, and replay data flows](docs/data-flow.md)

@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A phased, gated implementation blueprint for the PaymentLab AI MVP.">
+  <title>PaymentLab AI · MVP Implementation Blueprint</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --navy: #102d3e;
+      --navy-2: #173f55;
+      --teal: #087477;
+      --teal-dark: #05595c;
+      --mint: #dff5ef;
+      --gold: #d49a2b;
+      --gold-soft: #fff4d8;
+      --ink: #172d3b;
+      --muted: #567080;
+      --line: #d8e3e8;
+      --paper: #ffffff;
+      --wash: #f3f7f9;
+      --blue-soft: #eaf3f8;
+      --danger: #a13a35;
+      --shadow: 0 18px 48px rgba(16, 45, 62, .09);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
+    body {
+      margin: 0;
+      background: var(--wash);
+      color: var(--ink);
+      font: 16px/1.65 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: var(--teal-dark); text-underline-offset: .2em; }
+    a:hover { color: var(--navy); }
+    button, select { font: inherit; }
+
+    .masthead {
+      position: relative;
+      overflow: hidden;
+      background: var(--navy);
+      color: white;
+      padding: 4rem max(1.5rem, 6vw) 3rem;
+    }
+    .masthead::after {
+      content: "";
+      position: absolute;
+      inset: 0 0 0 auto;
+      width: 42%;
+      opacity: .2;
+      background-image:
+        linear-gradient(rgba(255,255,255,.14) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.14) 1px, transparent 1px);
+      background-size: 34px 34px;
+      transform: skewX(-8deg) translateX(8%);
+      pointer-events: none;
+    }
+    .masthead-inner { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; }
+    .eyebrow {
+      margin: 0 0 1rem;
+      color: #8ee3d3;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 850px;
+      margin: 0;
+      font-size: clamp(2.3rem, 6vw, 4.8rem);
+      line-height: .98;
+      letter-spacing: -.045em;
+    }
+    .dek {
+      max-width: 760px;
+      margin: 1.5rem 0 0;
+      color: #d4e5ed;
+      font-size: clamp(1.05rem, 2vw, 1.28rem);
+    }
+    .truth-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .65rem;
+      margin-top: 2rem;
+    }
+    .truth-line span {
+      border: 1px solid rgba(255,255,255,.24);
+      border-radius: 999px;
+      padding: .42rem .75rem;
+      color: #eef8fb;
+      font-size: .82rem;
+      font-weight: 650;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      min-height: 4rem;
+      padding: .65rem max(1rem, 4vw);
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(12px);
+    }
+    .brand { margin-right: auto; font-weight: 800; color: var(--navy); }
+    .toolbar a, .toolbar button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: .88rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .toolbar a:hover, .toolbar button:hover { color: var(--teal-dark); }
+    .mobile-menu { display: none; }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 940px);
+      gap: 2.5rem;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 6rem;
+    }
+    aside {
+      position: sticky;
+      top: 6rem;
+      align-self: start;
+      max-height: calc(100vh - 7rem);
+      overflow: auto;
+    }
+    aside h2 {
+      margin: 0 0 .7rem;
+      color: var(--muted);
+      font-size: .72rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    aside a {
+      display: block;
+      margin: .1rem 0;
+      padding: .48rem .7rem;
+      border-left: 2px solid transparent;
+      color: var(--muted);
+      font-size: .86rem;
+      text-decoration: none;
+    }
+    aside a:hover, aside a.active {
+      border-left-color: var(--teal);
+      background: var(--mint);
+      color: var(--teal-dark);
+    }
+
+    main { min-width: 0; }
+    section {
+      margin-bottom: 2rem;
+      padding: clamp(1.4rem, 4vw, 2.6rem);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    section > :first-child { margin-top: 0; }
+    section > :last-child { margin-bottom: 0; }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--navy);
+      font-size: clamp(1.55rem, 3vw, 2.15rem);
+      line-height: 1.15;
+      letter-spacing: -.025em;
+    }
+    h3 { margin: 1.8rem 0 .65rem; color: var(--navy-2); font-size: 1.13rem; }
+    p { margin: .75rem 0; }
+    ul, ol { padding-left: 1.25rem; }
+    li { margin: .42rem 0; }
+    code {
+      border-radius: .25rem;
+      background: #edf3f6;
+      padding: .1rem .28rem;
+      font: .88em ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .section-kicker {
+      margin-bottom: .55rem;
+      color: var(--teal-dark);
+      font-size: .76rem;
+      font-weight: 850;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .lead { max-width: 760px; color: var(--muted); font-size: 1.05rem; }
+    .callout {
+      margin: 1.4rem 0;
+      border-left: 4px solid var(--gold);
+      border-radius: 0 .6rem .6rem 0;
+      background: var(--gold-soft);
+      padding: 1rem 1.15rem;
+    }
+    .callout strong { color: #6e4a00; }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .85rem;
+      margin: 1.5rem 0;
+    }
+    .score {
+      min-height: 108px;
+      border: 1px solid var(--line);
+      border-radius: .75rem;
+      background: linear-gradient(145deg, #fff, #f3f8fa);
+      padding: 1rem;
+    }
+    .score b { display: block; color: var(--teal-dark); font-size: 1.8rem; line-height: 1; }
+    .score span { display: block; margin-top: .5rem; color: var(--muted); font-size: .82rem; }
+
+    .roadmap {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(130px, 1fr));
+      gap: .55rem;
+      margin-top: 1.5rem;
+      overflow-x: auto;
+      padding-bottom: .5rem;
+    }
+    .roadmap a {
+      position: relative;
+      min-width: 130px;
+      border-top: 5px solid var(--teal);
+      border-radius: .5rem;
+      background: var(--blue-soft);
+      padding: .85rem;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .roadmap a::after {
+      content: "→";
+      position: absolute;
+      right: -.52rem;
+      top: 42%;
+      z-index: 2;
+      color: var(--teal-dark);
+      font-weight: 900;
+    }
+    .roadmap a:last-child::after { display: none; }
+    .roadmap small { display: block; color: var(--teal-dark); font-weight: 850; }
+    .roadmap strong { display: block; margin-top: .3rem; font-size: .88rem; line-height: 1.25; }
+
+    .phase {
+      position: relative;
+      overflow: hidden;
+    }
+    .phase::before {
+      content: attr(data-phase);
+      position: absolute;
+      right: 1rem;
+      top: -.65rem;
+      color: rgba(8,116,119,.07);
+      font-size: 7rem;
+      font-weight: 900;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .phase-head {
+      position: relative;
+      display: flex;
+      align-items: start;
+      gap: 1rem;
+      margin-bottom: 1.3rem;
+    }
+    .phase-number {
+      display: grid;
+      flex: 0 0 3rem;
+      height: 3rem;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--navy);
+      color: white;
+      font-size: 1.25rem;
+      font-weight: 850;
+    }
+    .phase-head h2 { margin: 0; }
+    .phase-head p { margin: .35rem 0 0; color: var(--muted); }
+    .phase-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.35fr .85fr;
+      gap: 1.4rem;
+    }
+    .gate {
+      align-self: start;
+      border: 1px solid #bedfd7;
+      border-radius: .75rem;
+      background: var(--mint);
+      padding: 1rem;
+    }
+    .gate h3 { margin-top: 0; color: var(--teal-dark); }
+    .docs-chip {
+      display: inline-block;
+      margin: .18rem .15rem .18rem 0;
+      border-radius: 999px;
+      background: #edf3f6;
+      padding: .28rem .58rem;
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 700;
+    }
+
+    .diagram {
+      margin: 1.5rem 0;
+      border: 1px solid var(--line);
+      border-radius: .85rem;
+      background: #fbfdfe;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    .diagram svg { display: block; width: 100%; min-width: 680px; height: auto; }
+    .diagram figcaption { margin-top: .6rem; color: var(--muted); font-size: .82rem; text-align: center; }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(105px, 1fr));
+      align-items: stretch;
+      gap: .8rem;
+      margin: 1.2rem 0;
+      overflow-x: auto;
+      padding: .25rem .1rem .7rem;
+    }
+    .flow-node {
+      position: relative;
+      min-width: 110px;
+      border: 1px solid #bfd2dc;
+      border-radius: .65rem;
+      background: var(--blue-soft);
+      padding: .8rem;
+      font-size: .82rem;
+      font-weight: 750;
+      text-align: center;
+    }
+    .flow-node:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -.72rem;
+      top: 37%;
+      z-index: 2;
+      color: var(--teal-dark);
+      font-size: 1.2rem;
+    }
+    .flow-node.permission { border-color: #d7b052; background: var(--gold-soft); }
+    .flow-node.evidence { border-color: #8ac9ba; background: var(--mint); }
+
+    .swimlane {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      border: 1px solid var(--line);
+      border-radius: .75rem;
+      overflow: hidden;
+    }
+    .lane-name, .lane-steps { padding: .8rem; border-bottom: 1px solid var(--line); }
+    .lane-name { background: var(--navy); color: white; font-size: .82rem; font-weight: 800; }
+    .lane-steps { background: #fbfdfe; }
+    .lane-steps:last-child, .lane-name:nth-last-child(2) { border-bottom: 0; }
+    .lane-steps span {
+      display: inline-block;
+      margin: .15rem .3rem .15rem 0;
+      border-radius: .35rem;
+      background: var(--blue-soft);
+      padding: .35rem .55rem;
+      font-size: .8rem;
+    }
+
+    .table-wrap { margin: 1.2rem 0; overflow-x: auto; border: 1px solid var(--line); border-radius: .7rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    th { background: var(--navy); color: white; text-align: left; }
+    th, td { padding: .75rem .85rem; vertical-align: top; }
+    td { border-top: 1px solid var(--line); }
+    tbody tr:nth-child(even) td { background: #f7fafb; }
+    .status {
+      display: inline-block;
+      border-radius: 999px;
+      background: var(--gold-soft);
+      padding: .18rem .5rem;
+      color: #6e4a00;
+      font-size: .72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .doc-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: .8rem;
+      margin-top: 1.2rem;
+    }
+    .doc-card { border: 1px solid var(--line); border-radius: .7rem; padding: 1rem; }
+    .doc-card h3 { margin: 0 0 .35rem; font-size: 1rem; }
+    .doc-card p { margin: 0; color: var(--muted); font-size: .86rem; }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: .55rem 1rem;
+      padding: 0;
+      list-style: none;
+    }
+    .check-grid li {
+      position: relative;
+      margin: 0;
+      padding: .65rem .7rem .65rem 2rem;
+      border: 1px solid var(--line);
+      border-radius: .55rem;
+      background: #fbfdfe;
+    }
+    .check-grid li::before {
+      content: "□";
+      position: absolute;
+      left: .72rem;
+      color: var(--teal-dark);
+      font-weight: 900;
+    }
+
+    footer {
+      padding: 2.5rem 1.5rem;
+      background: var(--navy);
+      color: #c9dce5;
+      text-align: center;
+      font-size: .86rem;
+    }
+    footer a { color: #8ee3d3; }
+
+    :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; padding-top: 1.4rem; }
+      aside { display: none; position: static; max-height: none; }
+      aside.open { display: block; margin-bottom: .5rem; }
+      .mobile-menu { display: inline-block; }
+      .desktop-link { display: none; }
+      .scoreboard { grid-template-columns: repeat(2, 1fr); }
+      .phase-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .masthead { padding-top: 3rem; }
+      .scoreboard, .doc-grid, .check-grid { grid-template-columns: 1fr; }
+      section { border-radius: .8rem; padding: 1.2rem; }
+      .shell { padding-inline: .75rem; }
+      .swimlane { grid-template-columns: 95px minmax(0, 1fr); }
+      .phase::before { font-size: 5rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+    @media print {
+      @page { margin: 14mm; }
+      body { background: white; font-size: 10pt; }
+      .toolbar, aside { display: none !important; }
+      .masthead { padding: 18mm 12mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .shell { display: block; max-width: none; padding: 8mm 0; }
+      section { box-shadow: none; break-inside: avoid; margin-bottom: 6mm; }
+      .phase { break-before: page; }
+      .diagram svg { min-width: 0; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <p class="eyebrow">PaymentLab AI · Implementation blueprint</p>
+      <h1>From product contract to a trustworthy sandbox sale.</h1>
+      <p class="dek">A six-phase delivery plan for Guided Replay, bounded Buyer and Merchant agents, explicit purchase authority, ACP checkout, Stripe test-mode evidence, and resilient reconciliation.</p>
+      <div class="truth-line" aria-label="MVP boundaries">
+        <span>Sale-only MVP</span>
+        <span>Test mode only</span>
+        <span>One merchant · six products</span>
+        <span>Replay first · live payment last</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <span class="brand">PaymentLab AI</span>
+    <button class="mobile-menu" id="menuButton" type="button" aria-expanded="false" aria-controls="pageNav">Contents</button>
+    <a class="desktop-link" href="#roadmap">Roadmap</a>
+    <a class="desktop-link" href="#architecture">Architecture</a>
+    <a class="desktop-link" href="#traceability">Acceptance</a>
+    <button type="button" onclick="window.print()">Print / PDF</button>
+  </div>
+
+  <div class="shell">
+    <aside id="pageNav" aria-label="Page contents">
+      <h2>Blueprint</h2>
+      <nav>
+        <a href="#overview">Outcome and boundaries</a>
+        <a href="#roadmap">Roadmap at a glance</a>
+        <a href="#phase-0">Phase 0 · Decisions</a>
+        <a href="#phase-1">Phase 1 · Replay</a>
+        <a href="#phase-2">Phase 2 · Agents + ACP</a>
+        <a href="#phase-3">Phase 3 · Stripe</a>
+        <a href="#phase-4">Phase 4 · Release</a>
+        <a href="#phase-5">Phase 5 · Publish</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#design-flow">Design flow</a>
+        <a href="#data-flow">Data flow</a>
+        <a href="#documentation">Living documentation</a>
+        <a href="#traceability">Acceptance traceability</a>
+        <a href="#start">Start with Phase 0</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section id="overview">
+        <p class="section-kicker">Release definition</p>
+        <h2>One purchase. Three perspectives. One evidence trail.</h2>
+        <p class="lead">The MVP is a public, portfolio-linked sandbox showing an agent-led USD sale from Buyer, Merchant, and PSP perspectives. Every view derives from the same persisted transaction evidence.</p>
+        <div class="scoreboard" aria-label="Plan summary">
+          <div class="score"><b>6</b><span>gated delivery phases</span></div>
+          <div class="score"><b>28</b><span>acceptance checks</span></div>
+          <div class="score"><b>2</b><span>honestly separated modes</span></div>
+          <div class="score"><b>0</b><span>real-money transactions</span></div>
+        </div>
+        <h3>Mode boundary</h3>
+        <p><strong>Guided Replay</strong> is public, reliable, and read-only. It never invokes models, checkout mutations, payments, or webhooks. <strong>Live Sandbox</strong> uses bounded agents and may create one Stripe test-mode sale only after explicit, auditable authority.</p>
+        <div class="callout"><strong>Schedule rule.</strong> The phase sequence is committed; calendar estimates are not. Phase 0 must verify account capabilities, infrastructure, and ownership before dates are assigned.</div>
+        <h3>Explicitly outside the MVP</h3>
+        <p>Refunds, disputes, real fulfillment, real money, multi-PSP routing, PayPal fallback, marketplace payouts, subscriptions, production buyer identities, AP2 cryptographic mandates, and autonomous browser shopping.</p>
+      </section>
+
+      <section id="roadmap">
+        <p class="section-kicker">Delivery sequence</p>
+        <h2>Build the evidence path before polishing the story.</h2>
+        <p class="lead">Each phase produces a runnable increment and closes only when its documentation and repeatable evidence match the implementation.</p>
+        <div class="roadmap" aria-label="Six-phase roadmap">
+          <a href="#phase-0"><small>Phase 0</small><strong>Capabilities &amp; decisions</strong></a>
+          <a href="#phase-1"><small>Phase 1</small><strong>Domain &amp; replay</strong></a>
+          <a href="#phase-2"><small>Phase 2</small><strong>Agents &amp; ACP</strong></a>
+          <a href="#phase-3"><small>Phase 3</small><strong>Stripe &amp; recovery</strong></a>
+          <a href="#phase-4"><small>Phase 4</small><strong>Release readiness</strong></a>
+          <a href="#phase-5"><small>Phase 5</small><strong>Controlled publication</strong></a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Phase</th><th>Demonstrable increment</th><th>Hard gate</th></tr></thead>
+            <tbody>
+              <tr><td>0</td><td>Minimal supported test payment/callback and verified platform inventory—or a specific live blocker.</td><td>Protocol, payment, workflow, and deployment boundaries decided.</td></tr>
+              <tr><td>1</td><td>Complete successful story from synthetic events in all perspectives.</td><td>Deterministic economics, replay, responsive, and accessibility checks pass.</td></tr>
+              <tr><td>2</td><td>Real agents reach validated ACP checkout and pause at authority.</td><td>Isolation, durable wait/resume, ACP contracts, and no-payment boundary pass.</td></tr>
+              <tr><td>3</td><td>One authorized Stripe test sale plus blocked and uncertain scenarios.</td><td>Exactly-once effect, verified evidence, webhook, crash, duplicate, and ordering checks pass.</td></tr>
+              <tr><td>4</td><td>Preview with sanitized recordings, metrics, controls, case study, and runbook.</td><td>A01–A28 resolved; preview reviews pass.</td></tr>
+              <tr><td>5</td><td>Stable public replay and explicitly enabled live sandbox.</td><td>DNS, TLS, callback, smoke, rollback, and owner approval pass.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-0" data-phase="0">
+        <div class="phase-head"><span class="phase-number">0</span><div><h2>Capability and architecture decisions</h2><p>Resolve facts that can invalidate the live design before building it.</p></div></div>
+        <div class="phase-grid">
+          <div>
+            <h3>Build and verify</h3>
+            <ul>
+              <li>Inventory repository, portfolio, Vercel scope, Postgres, workflow, Stripe test account, model provider, and plan limits.</li>
+              <li>Pin an ACP release, schema hash, license, operations, authentication, and capability behavior.</li>
+              <li>Prove the actual Stripe test credential/delegation path with one tiny supported payment and signature-verified callback.</li>
+              <li>Prove durable wait, retry, callback wake-up or polling, crash recovery, and one committed dispatch.</li>
+              <li>Threat-model session, agent/tool, protocol, payment, webhook, evidence, and recording boundaries.</li>
+            </ul>
+            <h3>Required decisions</h3>
+            <span class="docs-chip">ADR-001 Runtime topology</span>
+            <span class="docs-chip">ADR-002 ACP revision</span>
+            <span class="docs-chip">ADR-003 Stripe path</span>
+            <span class="docs-chip">ADR-004 Durable workflow</span>
+            <span class="docs-chip">ACP compatibility record</span>
+          </div>
+          <div class="gate">
+            <h3>Exit gate</h3>
+            <p>Pass with a supported integrated path or an explicitly labeled custom Stripe completion boundary.</p>
+            <p>If live payment is blocked, Phase 1 replay continues. Never fabricate a delegated token or conformance claim.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-1" data-phase="1">
+        <div class="phase-head"><span class="phase-number">1</span><div><h2>Domain and Guided Replay foundation</h2><p>Deliver the five-minute story without external mutations.</p></div></div>
+        <div class="phase-grid">
+          <div>
+            <h3>Build</h3>
+            <ul>
+              <li>Scaffold the selected Next.js/TypeScript application and quality gates.</li>
+              <li>Implement integer-minor-unit money, six-product catalog, run-local inventory, quote/reservation rules, and exact fixture economics.</li>
+              <li>Define independent run, checkout, mandate, attempt, order, and webhook states.</li>
+              <li>Build versioned events, deterministic reducers, evidence references, snapshots, and explanations.</li>
+              <li>Build landing, journey, event rail, Buyer, Merchant, PSP, and responsive All Views.</li>
+              <li>Add read-only replay controls, backward seeking, honest fixture labels, keyboard support, and reduced motion.</li>
+            </ul>
+            <h3>Documentation changed</h3>
+            <span class="docs-chip">Data model</span><span class="docs-chip">Event schema</span><span class="docs-chip">Design flow</span><span class="docs-chip">Replay contract</span><span class="docs-chip">A01 A02 A25 A28</span>
+          </div>
+          <div class="gate">
+            <h3>Exit gate</h3>
+            <p>All views tell one consistent story; rewind exposes no future facts; replay cannot call live code; totals equal $303.19, $9.09, and $69.91.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-2" data-phase="2">
+        <div class="phase-head"><span class="phase-number">2</span><div><h2>Durable workflow, agents, and ACP checkout</h2><p>Reach the authority boundary with real bounded agents—and no payment dispatch.</p></div></div>
+        <div class="phase-grid">
+          <div>
+            <h3>Build</h3>
+            <ul>
+              <li>Add opaque sessions, ownership, admission counters, CSRF/origin checks, idempotent run creation, and reconnect.</li>
+              <li>Implement durable workflow, transactional outbox, ordered events, leases/fencing, and resumable permission waits.</li>
+              <li>Version separate Buyer and Merchant prompts, schemas, evidence IDs, tool allowlists, validation, and budgets.</li>
+              <li>Implement merchant catalog, stock, offer, quote, reservation, and pinned ACP client/server contracts.</li>
+              <li>Confirm normalized missions and implement exact/bounded mandate grant, expiry, revocation, reservation, and validation.</li>
+              <li>Stream committed events via SSE with cursor catch-up and polling fallback.</li>
+            </ul>
+            <h3>Documentation changed</h3>
+            <span class="docs-chip">Agent/tool contracts</span><span class="docs-chip">ACP compatibility</span><span class="docs-chip">API contract</span><span class="docs-chip">Architecture</span><span class="docs-chip">A05 A07–A09 A19 A21 A23 A26 A27</span>
+          </div>
+          <div class="gate">
+            <h3>Exit gate</h3>
+            <p>Both agents reach a server-validated, reserved, versioned checkout and pause durably for permission. No Phase 2 path can call the PSP.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-3" data-phase="3">
+        <div class="phase-head"><span class="phase-number">3</span><div><h2>Stripe test sale and resilient recovery</h2><p>Prove success, refusal, ambiguity, and exactly-once business effect.</p></div></div>
+        <div class="phase-grid">
+          <div>
+            <h3>Build</h3>
+            <ul>
+              <li>Add Stripe-hosted test setup with setup consent and backend-held safe references.</li>
+              <li>Atomically reserve authority and pre-create order, payment, attempt, and dispatch records.</li>
+              <li>Submit automatic capture with deterministic per-operation idempotency and request-hash conflicts.</li>
+              <li>Verify raw-body webhooks, persist before acknowledgement, deduplicate, apply asynchronously, and tolerate reordering.</li>
+              <li>Implement unknown outcome, same-attempt reconciliation, diagnostics, and unresolved-state UI.</li>
+              <li>Inject one allowlisted lost-response fault after an actual Stripe test mutation.</li>
+            </ul>
+            <h3>Documentation changed</h3>
+            <span class="docs-chip">Payment contract</span><span class="docs-chip">Webhook runbook</span><span class="docs-chip">Recovery flow</span><span class="docs-chip">Threat model</span><span class="docs-chip">A03 A04 A06 A10–A18 A20 A24</span>
+          </div>
+          <div class="gate">
+            <h3>Exit gate</h3>
+            <p>One mandate produces at most one successful payment and one confirmed order. Unknown outcomes reconcile without a new attempt. Confirmation requires provider evidence.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-4" data-phase="4">
+        <div class="phase-head"><span class="phase-number">4</span><div><h2>Portfolio-ready release</h2><p>Turn the working system into a safe, legible, measurable preview.</p></div></div>
+        <div class="phase-grid">
+          <div>
+            <h3>Build and review</h3>
+            <ul>
+              <li>Capture, sanitize, version, and validate successful, blocked, and uncertain integrated recordings.</li>
+              <li>Add metrics with population, sample size, source, conditions, and replay/live separation.</li>
+              <li>Add the case study, limitations, compatibility label, architecture summary, and independent-sandbox attribution.</li>
+              <li>Finish limits, kill switch, retention, unresolved-attempt diagnostics, secret rotation, health checks, headers, and CSP.</li>
+              <li>Complete README, environment/migration guide, runbook, incident/rollback steps, and portfolio-card proposal.</li>
+              <li>Review accessibility, responsiveness, performance, redaction, and recording compatibility on preview.</li>
+            </ul>
+            <h3>Documentation changed</h3>
+            <span class="docs-chip">Case study</span><span class="docs-chip">Runbook</span><span class="docs-chip">Release evidence</span><span class="docs-chip">Retention</span><span class="docs-chip">A01–A28 resolution</span>
+          </div>
+          <div class="gate">
+            <h3>Exit gate</h3>
+            <p>Every acceptance row is passed or explicitly resolved. Labels are accurate, the preview callback works, and replay-only rollback has been rehearsed.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-5" data-phase="5">
+        <div class="phase-head"><span class="phase-number">5</span><div><h2>Controlled public publication</h2><p>Publish the verified preview without changing unrelated assets.</p></div></div>
+        <div class="phase-grid">
+          <div>
+            <h3>Release</h3>
+            <ul>
+              <li>Obtain owner approval for release, live admission, domain, portfolio change, and operating limits.</li>
+              <li>Promote the compatible build and migrations in the verified Vercel scope.</li>
+              <li>Configure only the Vercel-provided demo subdomain records; preserve apex, <code>www</code>, email, and unrelated records.</li>
+              <li>Verify the stable Stripe test webhook endpoint and public journey.</li>
+              <li>Test session isolation, TLS, DNS, event delivery fallback, metrics labels, and case-study links.</li>
+              <li>Monitor first runs while retaining replay-only rollback and reconciliation for pending work.</li>
+            </ul>
+            <h3>Documentation changed</h3>
+            <span class="docs-chip">Deployment record</span><span class="docs-chip">Operating limits</span><span class="docs-chip">Launch smoke</span><span class="docs-chip">Rollback evidence</span>
+          </div>
+          <div class="gate">
+            <h3>Exit gate</h3>
+            <p>The public smoke suite passes, controls are active, no launch-critical attempts are unresolved, and the owner approves the portfolio link.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <p class="section-kicker">Component architecture</p>
+        <h2>The database commit is the synchronization point.</h2>
+        <p class="lead">Models propose actions through bounded tools. Server-side services own commerce truth. Every observer projection comes from persisted events—not model prose or browser state.</p>
+        <figure class="diagram">
+          <svg viewBox="0 0 900 500" role="img" aria-labelledby="archTitle archDesc">
+            <title id="archTitle">PaymentLab component architecture</title>
+            <desc id="archDesc">The browser calls run APIs and read-only views. Durable workflows coordinate Buyer and Merchant agents, ACP merchant services, a consent gate, and Stripe test payments. Postgres events drive authorized projections.</desc>
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#087477"/></marker>
+              <style>.box{fill:#eaf3f8;stroke:#9fbfcd;stroke-width:1.5}.secure{fill:#dff5ef;stroke:#72b7a7;stroke-width:1.5}.external{fill:#fff4d8;stroke:#d4a84a;stroke-width:1.5}.db{fill:#102d3e;stroke:#102d3e;stroke-width:1.5}.t{font:600 14px system-ui;fill:#172d3b}.tw{font:700 14px system-ui;fill:#fff}.line{fill:none;stroke:#087477;stroke-width:2;marker-end:url(#arrow)}</style>
+            </defs>
+            <rect class="box" x="30" y="35" width="170" height="58" rx="10"/><text class="t" x="115" y="69" text-anchor="middle">Browser workspace</text>
+            <rect class="box" x="265" y="35" width="170" height="58" rx="10"/><text class="t" x="350" y="69" text-anchor="middle">Session &amp; run APIs</text>
+            <rect class="secure" x="500" y="35" width="170" height="58" rx="10"/><text class="t" x="585" y="69" text-anchor="middle">Durable workflow</text>
+            <rect class="external" x="735" y="35" width="135" height="58" rx="10"/><text class="t" x="802" y="60" text-anchor="middle">Model</text><text class="t" x="802" y="78" text-anchor="middle">provider</text>
+
+            <rect class="box" x="30" y="175" width="170" height="58" rx="10"/><text class="t" x="115" y="209" text-anchor="middle">Buyer agent</text>
+            <rect class="box" x="265" y="175" width="170" height="58" rx="10"/><text class="t" x="350" y="200" text-anchor="middle">Pinned ACP</text><text class="t" x="350" y="218" text-anchor="middle">interface</text>
+            <rect class="box" x="500" y="175" width="170" height="58" rx="10"/><text class="t" x="585" y="200" text-anchor="middle">Merchant services</text><text class="t" x="585" y="218" text-anchor="middle">&amp; agent</text>
+            <rect class="secure" x="735" y="175" width="135" height="58" rx="10"/><text class="t" x="802" y="200" text-anchor="middle">Consent &amp;</text><text class="t" x="802" y="218" text-anchor="middle">payment gate</text>
+
+            <rect class="db" x="265" y="325" width="170" height="58" rx="10"/><text class="tw" x="350" y="350" text-anchor="middle">Postgres state</text><text class="tw" x="350" y="368" text-anchor="middle">events &amp; outbox</text>
+            <rect class="box" x="30" y="325" width="170" height="58" rx="10"/><text class="t" x="115" y="350" text-anchor="middle">Safe projections</text><text class="t" x="115" y="368" text-anchor="middle">SSE + polling</text>
+            <rect class="external" x="735" y="325" width="135" height="58" rx="10"/><text class="t" x="802" y="350" text-anchor="middle">Stripe test</text><text class="t" x="802" y="368" text-anchor="middle">API</text>
+            <rect class="secure" x="500" y="420" width="170" height="58" rx="10"/><text class="t" x="585" y="445" text-anchor="middle">Verified webhook</text><text class="t" x="585" y="463" text-anchor="middle">intake</text>
+
+            <path class="line" d="M200 64 H265"/><path class="line" d="M435 64 H500"/>
+            <path class="line" d="M670 64 H735"/><path class="line" d="M585 93 V175"/>
+            <path class="line" d="M500 204 H435"/><path class="line" d="M265 204 H200"/>
+            <path class="line" d="M670 204 H735"/><path class="line" d="M802 233 V325"/>
+            <path class="line" d="M735 354 H670 V449"/><path class="line" d="M500 449 H435 V383"/>
+            <path class="line" d="M500 93 L403 325"/><path class="line" d="M265 354 H200"/>
+            <path class="line" d="M115 325 V93"/>
+          </svg>
+          <figcaption>Proposed topology; Phase 0 verifies the actual durable runner, database, model provider, ACP boundary, and Stripe path.</figcaption>
+        </figure>
+        <h3>Hard authority boundaries</h3>
+        <ul>
+          <li>The browser can request and display; it cannot establish price truth, valid authority, or payment success.</li>
+          <li>Buyer and Merchant agents have separate prompts and tool allowlists even if they share a model.</li>
+          <li>ACP wire objects are validated against one pinned release; custom application behavior is labeled separately.</li>
+          <li>Stripe credentials and raw reusable payment tokens stay in trusted backend code.</li>
+          <li>Webhook input becomes trusted only after raw-body signature verification and durable receipt.</li>
+        </ul>
+      </section>
+
+      <section id="design-flow">
+        <p class="section-kicker">Experience flow</p>
+        <h2>Replay for reach. Live for proof. Consent before action.</h2>
+        <h3>Shared journey</h3>
+        <div class="flow-row" aria-label="Shared purchase journey">
+          <div class="flow-node">Mission</div><div class="flow-node">Compare</div><div class="flow-node">Quote</div><div class="flow-node permission">Permission</div><div class="flow-node">Payment</div><div class="flow-node evidence">Confirmation</div>
+        </div>
+        <h3>Guided Replay</h3>
+        <p>Select a sanitized scenario → play, pause, step, rewind, or change speed → switch Buyer, Merchant, PSP, and All Views → inspect “what happened / why / evidence” → review the outcome. Historical cursor changes never reveal future facts and cannot invoke live mutations.</p>
+        <h3>Live Sandbox</h3>
+        <p>Create session → choose scenario and mission → confirm normalized requirements → agents compare and prepare checkout → grant exact or bounded authority → revalidate and reserve → submit once → verify or reconcile provider evidence → show an honest terminal or waiting state.</p>
+        <div class="callout"><strong>Interaction contract.</strong> Setup consent, purchase authority, provider authentication, payment submission, provider response, and verified confirmation are six distinct facts in the UI and data model.</div>
+      </section>
+
+      <section id="data-flow">
+        <p class="section-kicker">Data and evidence flow</p>
+        <h2>Every consequential claim points back to a durable fact.</h2>
+        <div class="swimlane" aria-label="Live data flow by system actor">
+          <div class="lane-name">Visitor</div><div class="lane-steps"><span>mission</span><span>confirm requirements</span><span>grant or cancel</span></div>
+          <div class="lane-name">Run API</div><div class="lane-steps"><span>own session</span><span>validate writes</span><span>persist request</span></div>
+          <div class="lane-name">Workflow</div><div class="lane-steps"><span>bounded tools</span><span>durable wait</span><span>reconcile</span></div>
+          <div class="lane-name">Commerce</div><div class="lane-steps"><span>catalog truth</span><span>quote</span><span>reservation</span><span>mandate gate</span></div>
+          <div class="lane-name">Stripe test</div><div class="lane-steps"><span>idempotent submit</span><span>provider result</span><span>signed webhook</span></div>
+          <div class="lane-name">Evidence</div><div class="lane-steps"><span>ordered event</span><span>safe projection</span><span>snapshot + catch-up</span></div>
+        </div>
+        <h3>Unknown outcome rule</h3>
+        <p>A timeout preserves <code>unknown</code>, the original attempt, inventory reservation, and one-purchase authority. Recovery retrieves a known provider object or safely retries the same operation with the same idempotency key and payload. It never creates a new payment merely because a response was lost.</p>
+        <h3>Replay publication path</h3>
+        <div class="flow-row" aria-label="Replay publication path">
+          <div class="flow-node">Integrated test run</div><div class="flow-node">Allowlist &amp; pseudonymize</div><div class="flow-node">Schema &amp; secret scan</div><div class="flow-node">Versioned recording</div><div class="flow-node">Read-only route</div><div class="flow-node evidence">Historical projections</div>
+        </div>
+      </section>
+
+      <section id="documentation">
+        <p class="section-kicker">Living delivery record</p>
+        <h2>Documentation closes with the code, not after it.</h2>
+        <p class="lead">A phase is complete only when its diagrams, contracts, decisions, tests, operational effects, and change record match the runnable system.</p>
+        <div class="doc-grid">
+          <div class="doc-card"><h3>Implementation plan</h3><p>Scope, sequence, dependencies, work packages, and hard gates.</p></div>
+          <div class="doc-card"><h3>Architecture</h3><p>Components, responsibilities, trust boundaries, deployment, and growth seams.</p></div>
+          <div class="doc-card"><h3>Design flow</h3><p>Replay, Live Sandbox, permission, recovery, end states, and accessibility.</p></div>
+          <div class="doc-card"><h3>Data flow</h3><p>Writes, provider calls, webhooks, evidence, replay publication, and retention.</p></div>
+          <div class="doc-card"><h3>Data model</h3><p>Entities, state separation, migrations, ordering, and hard invariants.</p></div>
+          <div class="doc-card"><h3>ADRs</h3><p>Verified context, options, decision, consequences, evidence, and rollback.</p></div>
+          <div class="doc-card"><h3>Traceability</h3><p>A01–A28 mapped to phase, test layer, status, command, and safe evidence.</p></div>
+          <div class="doc-card"><h3>Phase record</h3><p>Component change log, tests, risks, gate review, limitations, and handoff.</p></div>
+        </div>
+        <h3>Phase completion checklist</h3>
+        <ul class="check-grid">
+          <li>Runnable increment demonstrated</li><li>Positive and negative tests pass</li>
+          <li>A01–A28 rows updated</li><li>Diagrams match implementation</li>
+          <li>Contracts and migrations recorded</li><li>Consequential ADRs accepted</li>
+          <li>Security and privacy reviewed</li><li>Recovery and rollback verified</li>
+        </ul>
+      </section>
+
+      <section id="traceability">
+        <p class="section-kicker">Release proof</p>
+        <h2>Acceptance traceability · A01–A28</h2>
+        <p class="lead">Every check starts as planned. It moves to passed only when a repeatable test, environment, safe result, and relevant artifact are linked.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Invariant</th><th>Phase</th><th>Verification</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>A01</td><td>Replay makes no live mutations</td><td>1</td><td>Browser + route boundary</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A02</td><td>Historical cursor reveals no future facts</td><td>1</td><td>Reducer + browser seek</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A03</td><td>Both agents and actual test evidence</td><td>3</td><td>Agent integration + Stripe smoke</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A04</td><td>One order/sale; exact server quote</td><td>3</td><td>Concurrency + smoke</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A05</td><td>Same run across tabs and windows</td><td>2</td><td>Multi-context browser</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A06</td><td>Refresh after submission adds no payment</td><td>3</td><td>Browser + provider integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A07</td><td>Above-authority quote blocked pre-PSP</td><td>2</td><td>Mandate integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A08</td><td>Cart change invalidates exact approval</td><td>2</td><td>Version integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A09</td><td>Expired/revoked grant blocks dispatch</td><td>2</td><td>State + integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A10</td><td>Post-dispatch revoke reconciles honestly</td><td>3</td><td>Provider integration + UI</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A11</td><td>Concurrent completion dispatches once</td><td>3</td><td>Database concurrency</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A12</td><td>Stable same-key retry; payload conflict</td><td>3</td><td>Idempotency integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A13</td><td>Lost response reconciles original attempt</td><td>3</td><td>Fault injection</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A14</td><td>Duplicate webhook has one effect</td><td>3</td><td>Webhook integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A15</td><td>Invalid webhook mutates nothing</td><td>3</td><td>Webhook security</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A16</td><td>Early/out-of-order events do not regress</td><td>3</td><td>Ordering integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A17</td><td>UI/model claim cannot confirm order</td><td>3</td><td>Negative integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A18</td><td>Provider authentication persists/resumes</td><td>3</td><td>Hosted-flow integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A19</td><td>Cross-session access denied</td><td>2</td><td>Authorization integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A20</td><td>Kill switch rejects new work, reconciles old</td><td>3</td><td>Admission + recovery</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A21</td><td>Malicious text cannot change authority</td><td>2</td><td>Agent adversarial test</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A22</td><td>No secrets in logs, exports, recordings</td><td>4</td><td>Secret scan + review</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A23</td><td>ACP contracts match pinned schemas</td><td>2</td><td>Schema contract suite</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A24</td><td>Missing SPT uses accurate alternative</td><td>0/3</td><td>Capability + label check</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A25</td><td>Keyboard/reduced motion complete flow</td><td>1/4</td><td>Accessibility audit</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A26</td><td>Workflow survives all tabs closing</td><td>2/3</td><td>Durable runner integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A27</td><td>Commit-before-enqueue crash recovers</td><td>2</td><td>Outbox crash integration</td><td><span class="status">Planned</span></td></tr>
+              <tr><td>A28</td><td>Exact fixture economics</td><td>1</td><td>Money/quote unit test</td><td><span class="status">Planned</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="start">
+        <p class="section-kicker">Immediate next move</p>
+        <h2>Start with Phase 0—not application scaffolding.</h2>
+        <p class="lead">The first working session should resolve the platform inventory and establish evidence for the riskiest integration boundary.</p>
+        <ol>
+          <li>Confirm the implementation and portfolio repositories and any local instructions.</li>
+          <li>Verify Vercel scope, database/workflow availability, Stripe test mode, and model-provider constraints.</li>
+          <li>Pin ACP artifacts and test exact schema/auth/capability behavior.</li>
+          <li>Complete one small supported Stripe test payment and verified webhook callback.</li>
+          <li>Accept ADRs 001–004 and choose integrated live, labeled extension, or replay-only continuation.</li>
+          <li>Estimate Phases 1–5 from verified scope and available capacity.</li>
+        </ol>
+        <div class="callout"><strong>Human control remains explicit.</strong> Phase 0 does not authorize publication, DNS edits, portfolio changes, real-money processing, or unrelated account mutations.</div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <p>PaymentLab AI MVP implementation blueprint · Derived from PRD version 1.0 · 8 September 2026</p>
+    <p>The HTML is a readable companion. The Markdown documents remain the living implementation record.</p>
+    <p><a href="PaymentLab-AI-MVP-PRD.html">Product requirements</a> · <a href="docs/implementation-plan.md">Markdown implementation plan</a> · <a href="docs/README.md">Documentation index</a></p>
+  </footer>
+
+  <script>
+    const menuButton = document.getElementById('menuButton');
+    const pageNav = document.getElementById('pageNav');
+    const navLinks = Array.from(pageNav.querySelectorAll('a'));
+    const observed = navLinks.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+
+    menuButton.addEventListener('click', () => {
+      const open = pageNav.classList.toggle('open');
+      menuButton.setAttribute('aria-expanded', String(open));
+    });
+
+    navLinks.forEach(link => link.addEventListener('click', () => {
+      pageNav.classList.remove('open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    }));
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => {
+        const visible = entries.filter(entry => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        navLinks.forEach(link => link.classList.toggle('active', link.getAttribute('href') === '#' + visible.target.id));
+      }, { rootMargin: '-18% 0px -68% 0px', threshold: [0, .15, .5] });
+      observed.forEach(section => observer.observe(section));
+    }
+  </script>
+</body>
+</html>

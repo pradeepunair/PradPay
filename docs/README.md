@@ -6,6 +6,10 @@ implementation record. The PRD remains the product contract. These documents
 explain how the team intends to deliver it and must be updated as implementation
 evidence replaces assumptions.
 
+The repository root also contains a self-contained
+[`PaymentLab-MVP-Implementation-Plan.html`](../PaymentLab-MVP-Implementation-Plan.html)
+for visual review and printing. Markdown remains the editable source of truth.
+
 ## Document map
 
 | Document | Purpose | Update rule |
