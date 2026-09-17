@@ -39,8 +39,10 @@ DNS is owner-managed and direct production deployments are retired.
 | Authenticated user | `pradeepunair-3058` | `vercel whoami` |
 | Intended team | `prad7` / PRAD | CLI and dashboard |
 | Team plan | Hobby | Authenticated dashboard |
-| Existing projects | Only `pradeepunair-me` | `vercel project ls --scope prad7` |
-| PaymentLab project | Does not exist | CLI project listing |
+| Existing projects | `pradeepunair-me` plus isolated `pradpay` | `vercel project ls --scope prad7` and deployment inspection |
+| PaymentLab project | `prad7/pradpay`; production deployment ready | Vercel CLI project creation and deployment inspection |
+| Public application URL | `https://pradpay.vercel.app` | HTTPS response `200` on 2026-09-09 |
+| Public Stripe callback | `https://pradpay.vercel.app/api/webhooks/stripe` | HTTPS `POST` returns `503` fail-closed until `STRIPE_WEBHOOK_SECRET` exists |
 | Workflow | Dashboard available and shows Workflow SDK onboarding | Authenticated dashboard |
 | Published Hobby Workflow allowance | 50,000 workflow events/month and 1 GB workflow storage writes; no Hobby on-demand overage | Current Vercel pricing table |
 | Database | No existing team database/store shown | Authenticated Storage dashboard |
@@ -48,8 +50,9 @@ DNS is owner-managed and direct production deployments are retired.
 | Database proposal | Neon Postgres through Marketplace with Prisma ORM; no resource created | Provider comparison and ADR-0007 |
 | AI Gateway | Available but unconfigured; setup asks for API key and billing card | Authenticated AI Gateway dashboard |
 
-Creating the PaymentLab project, database, AI key, billing setup, domain, or
-deployment would change external state and has not been done.
+The isolated PaymentLab project and first deployment were created with owner
+authorization on 2026-09-09. No database, model key, billing setup, custom
+domain, portfolio change, or Stripe configuration was created.
 
 Vercel states that Hobby teams can be paused when included usage is exhausted.
 That platform behavior is not sufficient as PaymentLab's product kill switch;
@@ -69,6 +72,17 @@ submitted-payment reconciliation available.
 | ACP/SPT product status | Stripe documentation labels agentic commerce and SPT as private preview | Official Stripe documentation |
 | Documented test path | Test helper can simulate a granted SPT, then confirm a PaymentIntent with that SPT | Official Stripe SPT documentation |
 | Owner-account SPT availability | Unknown | Requires a controlled test-helper call; dashboard access alone does not prove entitlement |
+
+On 2026-09-09, the sandbox event-destination selector at API version
+`2026-08-26.dahlia` exposed `shared_payment.granted_token.deactivated` but did
+not expose or return a search result for the documented seller event
+`shared_payment.granted_token.used`. The agent-side
+`shared_payment.issued_token.used` event was available but was intentionally not
+substituted. The prepared, unsubmitted destination therefore contains six
+events: the five required PaymentIntent events plus granted-token deactivation.
+This is account/UI capability evidence, not proof that the SPT API endpoint is
+unavailable; the controlled test-helper call remains the deciding entitlement
+check.
 
 No test object, webhook endpoint, payment, API key, or account setting has been
 created or changed.
@@ -110,6 +124,12 @@ documentation, fixtures, logs, or model context.
    safe metadata, and the same tested API version.
 8. Prove signed receipt, duplicate delivery, out-of-order handling, and provider
    lookup/reconciliation while retaining only safe object identifiers and digests.
+
+The fixed fictional spike identity is `phase0-spt-spike-001`, with seller/cart
+reference `pradpay-phase0-cart-001`, amount USD 1.00 (`100` cents), and stable
+PaymentIntent idempotency key `pradpay:phase0:spt-payment:v1`. Set the SPT expiry
+to 15 minutes after the helper request. These values identify the one permitted
+test attempt and contain no customer or payment credentials.
 
 ## ACP
 

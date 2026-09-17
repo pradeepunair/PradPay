@@ -7,6 +7,29 @@ import { fileURLToPath } from "node:url";
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, "..");
 const phasesDirectory = path.join(repositoryRoot, "docs", "phases");
+const checkOnly = process.argv.includes("--check");
+const staleOutputs = [];
+
+async function emitOutput(outputName, html) {
+  const outputPath = path.join(phasesDirectory, outputName);
+  if (!checkOnly) {
+    await writeFile(outputPath, html);
+    return;
+  }
+
+  let current;
+  try {
+    current = await readFile(outputPath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      staleOutputs.push(`${outputName} (missing)`);
+      return;
+    }
+    throw error;
+  }
+
+  if (current !== html) staleOutputs.push(outputName);
+}
 
 const escapeHtml = (value) =>
   value
@@ -271,7 +294,7 @@ for (const document of documents) {
     sourceName: document.sourceName,
     description: `${document.title}, generated from the maintained Markdown phase record.`,
   });
-  await writeFile(path.join(phasesDirectory, outputName), html);
+  await emitOutput(outputName, html);
 }
 
 const cards = phaseDocuments
@@ -288,8 +311,8 @@ const indexIntroduction = indexMarkdown.split("The paired records are:")[0];
 const indexBody = `${renderMarkdown(indexIntroduction, phaseSources)}
 <div class="cards">${cards}</div>
 <p><a href="PHASE-TEMPLATE.html">HTML phase template</a> · <a href="PHASE-TEMPLATE.md">Markdown phase template</a></p>`;
-await writeFile(
-  path.join(phasesDirectory, "index.html"),
+await emitOutput(
+  "index.html",
   page({
     title: "Phase documentation",
     body: indexBody,
@@ -299,4 +322,14 @@ await writeFile(
   }),
 );
 
-console.log(`Generated ${documents.length} phase pages plus docs/phases/index.html.`);
+if (checkOnly && staleOutputs.length) {
+  console.error(`Stale generated phase HTML:\n${staleOutputs.map((name) => `- ${name}`).join("\n")}`);
+  console.error("Run npm run docs:phases and commit the generated output.");
+  process.exit(1);
+}
+
+console.log(
+  checkOnly
+    ? `Verified ${documents.length} generated phase pages plus docs/phases/index.html are current.`
+    : `Generated ${documents.length} phase pages plus docs/phases/index.html.`,
+);

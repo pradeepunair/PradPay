@@ -29,7 +29,7 @@ specific documented blocker that leaves Guided Replay unblocked.
 
 - [x] Confirm the implementation repository and default-branch workflow.
 - [x] Confirm the portfolio repository/framework and desired integration point.
-- [ ] Confirm the Vercel owner/team, project naming, environment separation, and
+- [x] Confirm the Vercel owner/team, project naming, environment separation, and
       whether preview callbacks can be public without weakening unrelated protection.
 - [ ] Identify available managed Postgres and durable workflow resources. Vercel
       Workflow is visible on the verified Hobby team; no database exists yet.
@@ -48,7 +48,7 @@ specific documented blocker that leaves Guided Replay unblocked.
 ### Stripe test payment
 
 - [ ] Verify test-mode account and supported hosted/payment credential path.
-- [ ] Choose a small fictional quote and stable operation/idempotency identity.
+- [x] Choose a small fictional quote and stable operation/idempotency identity.
 - [ ] Create exactly one test payment through a supported path.
 - [ ] Receive, signature-verify, deduplicate, and safely record its callback.
 - [ ] Remove or retain spike resources according to the documented test policy.
@@ -58,6 +58,20 @@ The dedicated `PradPay sandbox` and Workbench are verified. No API activity or
 event destination exists. The existing standard test secret was exposed through
 browser accessibility output and must be rotated before use. SPT entitlement is
 still unverified because it requires a controlled test-helper API call.
+
+The 2026-09-09 Stripe destination selector exposed the documented granted-token
+deactivation event but not `shared_payment.granted_token.used`; an exact search
+returned no result. The available agent-side issued-token event is not an
+equivalent seller event and was not selected. The destination form is prepared
+with the five required PaymentIntent events plus granted-token deactivation but
+has not been submitted. The SPT helper call remains the capability gate.
+
+The approved spike fixture is fictional and test-only: operation
+`phase0-spt-spike-001`, seller/cart reference `pradpay-phase0-cart-001`, USD 1.00
+(`100` cents), and idempotency key `pradpay:phase0:spt-payment:v1`. The SPT expiry
+must be calculated as 15 minutes after the helper request; it must not be a
+checked-in timestamp. Retrying the one permitted PaymentIntent must reuse the
+same idempotency key rather than create another payment.
 
 ### Durable execution
 
@@ -105,6 +119,10 @@ selected yet.
 | Repository/platform inventory | Local repositories + Vercel `prad7` | `docs/phase-0-environment-inventory.md` | partial; cloud resources still required | Codex / 2026-09-08 |
 | ACP schema/contract spike | Temporary upstream checkout | `protocol/acp/manifest.json`; `docs/acp-compatibility.md` | protocol snapshot passed | Codex / 2026-09-08 |
 | Stripe account readiness | Authenticated `PradPay sandbox` | `docs/phase-0-environment-inventory.md` | partial; key rotation, callback, and SPT API test required | Codex / 2026-09-08 |
+| Phase HTML review | Local-only browser preview | `docs/phases/index.html`; all generated phase pages | passed; full Phase 0 page and shared navigation visually reviewed | Codex / 2026-09-08 |
+| Local webhook boundary | Next.js route plus synthetic signed-event tests | `app/api/webhooks/stripe/route.js`; `test/stripe-webhook.test.mjs` | passed locally; durable receipt and provider-signed event remain pending | Codex / 2026-09-08 |
+| Public HTTPS callback deployment | Isolated Vercel project `prad7/pradpay` | `https://pradpay.vercel.app/api/webhooks/stripe` | deployed; returns `503` fail-closed until endpoint signing secret is configured | Codex / 2026-09-09 |
+| SPT event selector compatibility | `PradPay sandbox`, API `2026-08-26.dahlia` | Prepared Stripe destination form; no secret captured | partial blocker; granted-token deactivation available, granted-token used unavailable | Codex / 2026-09-09 |
 | Stripe test payment | — | — | pending | — |
 | Verified webhook callback | — | — | pending | — |
 | Durable workflow recovery spike | — | — | pending | — |
@@ -129,4 +147,4 @@ unresolved assumption, cost, and owner authorization needed next.
 
 ### Documentation parity
 
-- [ ] Markdown and generated HTML phase records match and HTML is visually reviewed.
+- [x] Markdown and generated HTML phase records match and HTML is visually reviewed.
