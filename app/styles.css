@@ -168,6 +168,78 @@ code {
   background: #071a21;
 }
 
+.site-header {
+  width: min(1180px, calc(100% - 32px));
+  min-height: 70px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  color: #07120f;
+  background: var(--accent);
+}
+
+.environment-pill {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.hero {
+  min-height: 590px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.75fr);
+  gap: clamp(32px, 7vw, 88px);
+  align-items: center;
+}
+
+.hero h1 { font-size: clamp(3rem, 7vw, 6.2rem); }
+.hero-copy { max-width: 700px; color: var(--muted); font-size: 1.08rem; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.button { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; padding: 10px 16px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-weight: 800; text-decoration: none; }
+.button.primary { color: #07120f; background: var(--accent); border-color: var(--accent); }
+.button.secondary { background: rgba(13, 36, 45, .7); }
+.button:hover, .button:focus-visible { transform: translateY(-1px); outline: 2px solid var(--accent); outline-offset: 3px; }
+.mission-card, .scope-card { padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: rgba(13, 36, 45, .88); }
+.mission-card ul { padding-left: 19px; color: var(--muted); }
+.mission-card li + li { margin-top: 10px; }
+.card-kicker, .fixture-note { color: var(--accent); font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.fixture-note { margin: 20px 0 0; color: var(--muted); text-transform: none; letter-spacing: 0; }
+.scope-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 16px; padding: 55px 0 25px; border-top: 1px solid var(--line); }
+.scope-grid > div:first-child { padding-right: 20px; }
+.scope-grid p { color: var(--muted); }
+.scope-card strong { color: var(--accent); }
+.replay-shell { width: 100%; max-width: none; margin: 0; padding: 0; }
+.replay-site-header { width: min(1560px, calc(100% - 52px)); }
+
+@media (max-width: 780px) {
+  .hero, .scope-grid { grid-template-columns: 1fr; }
+  .hero { min-height: auto; padding: 64px 0; }
+  .scope-grid > div:first-child { padding-right: 0; }
+  .environment-pill { max-width: 165px; text-align: right; }
+}
+
 @media (max-width: 720px) {
   main {
     padding: 40px 0;

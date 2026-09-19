@@ -139,7 +139,8 @@ reconciliation must survive browser closure and bounded function termination.
 | [0003](decisions/0003-stripe-payment-path.md) | Proposed; blocked | Stripe credential/payment-handler boundary | Supported owner-account test flow and tiny end-to-end spike |
 | [0004](decisions/0004-durable-workflow.md) | Proposed | Durable workflow/outbox | Wait/retry/recovery proof, limits, operational ownership, cost |
 | [0005](decisions/0005-model-provider.md) | Proposed | Model provider and structured-tool contract | Supported schemas, usage reporting, timeout/retry behavior, data policy |
-| [0006](decisions/0006-event-projection-and-redaction.md) | Proposed | Event schema and projection/redaction policy | Replay compatibility, observer roles, safe evidence examples |
+| [0006](decisions/0006-event-projection-and-redaction.md) | Accepted for synthetic replay | Event schema and projection/redaction policy | Integrated-recording publication remains gated |
+| [0008](decisions/0008-guided-replay-recording-contract.md) | Accepted for Milestone 1 | Checked-in synthetic recording and cursor projection | Integrated capture/sanitization remains out of scope |
 | [0007](decisions/0007-database-and-orm.md) | Proposed | Neon Postgres and Prisma ORM | Authorized resource plus transaction/migration/restore proof |
 
 ## Growth seams, not MVP promises
@@ -148,3 +149,12 @@ The ACP adapter, payment adapter, event schema, and workflow steps should retain
 clear interfaces for later payment operations or providers. The MVP must not
 build unused service shells or imply that refunds, disputes, PayPal, routing, or
 AP2 proof already work.
+
+## Implemented Milestone 1 replay slice
+
+The local Milestone 1 increment serves `/demo/[runId]` as a statically generated,
+read-only route. `lib/replay/store.mjs` accepts only allowlisted checked-in
+recordings labelled `synthetic_development_fixture`; `lib/replay/reducer.mjs`
+derives every view from events at or before the selected cursor. The client
+workspace imports neither the Stripe webhook route nor any future live adapter.
+No database, workflow, model, Stripe, or other external credential is required.

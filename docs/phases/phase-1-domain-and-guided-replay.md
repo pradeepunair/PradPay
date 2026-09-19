@@ -1,8 +1,8 @@
 # Phase 1 — domain and Guided Replay foundation
 
-- Status: not started
+- Status: implemented locally; independent QA pending
 - Owner: Pradeep Nair
-- Start date: pending Phase 0 gate
+- Start date: 2026-09-16
 - Gate review date: pending
 - PRD milestone: Milestone 1
 - Applicable acceptance checks: A01-A10, A18, A22, A25, A28
@@ -59,7 +59,7 @@ synthetic events. It performs no agent, Stripe, or other external mutation.
 
 | Item | Type | Owner | Resolution/evidence |
 | --- | --- | --- | --- |
-| Recording storage/manifest format | Decision | Pradeep | ADR or contract fixture before implementation |
+| Recording storage/manifest format | Decision | Pradeep | ADR-0008 and schema `1.0.0` fixture |
 | Replay/live code isolation | Security risk | Engineering | Mutation-free route and dependency tests |
 | Future-event leakage during rewind | Correctness risk | Engineering | Cursor projection tests |
 | Responsive four-view legibility | Experience risk | Design | Mobile and desktop review |
@@ -80,17 +80,18 @@ synthetic events. It performs no agent, Stripe, or other external mutation.
 | Date | Change | Reason | PR/commit | Docs/tests affected |
 | --- | --- | --- | --- | --- |
 | 2026-09-08 | Created phase packet | Establish Markdown/HTML phase pair before implementation | pending | This record |
+| 2026-09-16 | Implemented conditionally approved replay/domain foundation | Deliver synthetic replay without live dependencies | local feature branch | Domain, replay, ACP contract, UI, and focused tests |
 
 ## Exit gate review
 
-- [ ] Successful Guided Replay is demonstrable in every perspective.
-- [ ] Economics, reducers, transitions, and recording compatibility tests pass.
-- [ ] Rewind exposes no future event or derived value.
-- [ ] Replay routes cannot invoke live agents or payment mutations.
-- [ ] Applicable A01-A28 rows link repeatable evidence.
-- [ ] Architecture, design flow, data flow, and data model match the increment.
-- [ ] Accessibility and responsive review pass.
-- [ ] Markdown and generated HTML phase records match.
+- [x] Successful Guided Replay is demonstrable in every perspective locally.
+- [x] Economics, reducers, transitions, and recording compatibility tests pass.
+- [x] Rewind exposes no future event or derived value.
+- [x] Replay routes cannot invoke live agents or payment mutations.
+- [x] Applicable implemented rows link repeatable evidence; later-phase rows remain planned.
+- [x] Architecture, design flow, data flow, and data model match the increment.
+- [x] Local accessibility semantics and responsive review pass; independent QA pending.
+- [x] Markdown and generated HTML phase records match.
 
 ## Handoff
 

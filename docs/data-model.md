@@ -92,3 +92,19 @@ Migrations are explicit, reviewable, and backward-compatible with the currently
 deployed code during rollout. Event schema changes are versioned; older replay
 renderers tolerate unknown event types. Destructive cleanup is a separate,
 observable retention job and cannot remove unresolved reconciliation records.
+
+## Implemented Milestone 1 domain subset
+
+The replay foundation implements six independent transition tables: `run`,
+`checkout`, `mandate`, `attempt`, `order`, and `webhook`. Illegal or regressive
+transitions fail closed. Money uses integer USD minor units and basis-point
+multiplication rounded half up; the reference fixture verifies `$303.19` total,
+`$9.09` illustrative processor fee, and `$69.91` contribution.
+
+Recording schema `1.0.0` requires a contiguous increasing sequence, unique event
+IDs, ordered timestamps within the declared duration, summaries,
+explanations/evidence references, typed allowlisted projection patches, a
+validated fictional catalog, and the source label
+`synthetic_development_fixture`. The checked-in
+store intentionally rejects integrated/live recording labels until a later
+publication gate exists.

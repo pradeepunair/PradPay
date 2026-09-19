@@ -125,3 +125,18 @@ Never say funds settled, goods shipped, or fulfillment completed.
 - Reduced-motion mode; animations represent actual state changes.
 - Auto-scroll stops when the visitor inspects earlier evidence.
 - A phone viewport can complete Guided Replay and the permission decision.
+
+## Implemented Guided Replay interaction
+
+The landing page opens the allowlisted successful fixture. The workspace keeps
+the run label, synthetic-only boundary, phase, state, and cursor visible; offers
+Buyer, Merchant, Provider, and synchronized All Views tabs; and provides an
+ordered event rail, evidence details, first/previous/play/next controls, a range
+scrubber, and three playback speeds. Selecting an event pauses playback.
+
+Future rail entries are not rendered; summaries, event types, and derived
+provider facts appear only after the cursor reaches them. At phone width,
+panels stack and controls remain available
+without document-level horizontal overflow. Buttons, tabs, range, and select
+controls use native keyboard semantics, visible focus, labels, and text status.
+No motion is required to interpret a state change.

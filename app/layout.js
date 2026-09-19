@@ -1,8 +1,8 @@
 import "./styles.css";
 
 export const metadata = {
-  title: "PaymentLab AI",
-  description: "A test-only lab for verified agentic payment flows.",
+  title: "PaymentLab AI — Guided Replay",
+  description: "Inspect a synthetic agentic-commerce journey from buyer, merchant, and payment-provider perspectives.",
 };
 
 export default function RootLayout({ children }) {

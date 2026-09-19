@@ -5,8 +5,8 @@ Evidence links are added when tests exist; prose assertions are not test evidenc
 
 | ID | Primary phase | Planned verification | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| A01 Replay makes no live mutations | 1 | Browser + route-boundary integration | planned | — |
-| A02 Historical cursor has no future facts | 1 | Reducer unit + browser seek | planned | — |
+| A01 Replay makes no live mutations | 1 | Browser + route-boundary integration | implemented; QA pending | `test/replay-isolation.test.mjs`; local route read-back |
+| A02 Historical cursor has no future facts | 1 | Reducer unit + browser seek | implemented; QA pending | `test/replay.test.mjs`; manual seek read-back |
 | A03 Both agents and actual test evidence | 3 | Agent integration + Stripe smoke | planned | — |
 | A04 One confirmed order/sale; quote total | 3 | Concurrency integration + smoke | planned | — |
 | A05 Same run across tabs/windows | 2 | Multi-context browser test | planned | — |
@@ -26,13 +26,13 @@ Evidence links are added when tests exist; prose assertions are not test evidenc
 | A19 Cross-session access denied without leakage | 2 | Authorization integration | planned | — |
 | A20 Limit/kill switch rejects new work, reconciles old | 3 | Admission + recovery integration | planned | — |
 | A21 Malicious text cannot change authority/tools | 2 | Agent adversarial test | planned | — |
-| A22 Logs/exports/recordings contain no secrets | 4 | Automated secret scan + manual review | planned | — |
-| A23 ACP contracts match pinned schema | 2 | Generated-schema contract suite | planned | — |
+| A22 Logs/exports/recordings contain no secrets | 4 | Automated secret scan + manual review | fixture check implemented; integrated path pending | `test/replay-isolation.test.mjs` |
+| A23 ACP contracts match pinned schema | 2 | Generated-schema contract suite | scaffold implemented; endpoint suite pending | `test/acp-contract.test.mjs`; pinned upstream hashes |
 | A24 Missing SPT uses accurate supported alternative | 0/3 | Capability spike + label browser test | planned | — |
-| A25 Keyboard and reduced motion complete core flow | 1/4 | Accessibility browser + manual audit | planned | — |
+| A25 Keyboard and reduced motion complete core flow | 1/4 | Accessibility browser + manual audit | semantic/local viewport review complete; QA audit pending | native controls; 390px local read-back |
 | A26 Workflow survives all tabs closing | 2/3 | Durable runner integration | planned | — |
 | A27 Commit-before-enqueue crash recovers | 2 | Outbox crash integration | planned | — |
-| A28 Exact fixture economics | 1 | Money/quote unit test | planned | — |
+| A28 Exact fixture economics | 1 | Money/quote unit test | implemented; QA pending | `test/domain-money.test.mjs` |
 
 ## Phase gate rule
 

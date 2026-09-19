@@ -50,3 +50,10 @@ locations, environment scopes, and webhook sequence.
 Guided Replay and Live Sandbox are separate modes. Replay is read-only. Live
 Sandbox, if the Phase 0 capability gate passes, uses bounded agents and Stripe
 test mode only; no real money or real fulfillment is part of the MVP.
+
+The conditionally approved Milestone 1 increment is available locally at
+`/demo/synthetic-success-v1`. It uses a checked-in synthetic recording, integer
+money/domain rules, event-cursor projections, and vendored ACP 2026-04-17
+contract artifacts. It needs no Stripe, database, workflow, or model secrets and
+cannot submit payments. See [the Milestone 1 plan](docs/m1-implementation-plan.md)
+and [ADR-0008](docs/decisions/0008-guided-replay-recording-contract.md).

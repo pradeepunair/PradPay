@@ -117,3 +117,19 @@ assets. Deletion cannot orphan a submitted or unknown payment: retain the minimu
 attempt, provider reference, mandate reservation, webhook, and reconciliation
 state until resolved. Provider-side test records follow provider retention and
 are not erased by local cleanup.
+
+## Implemented synthetic replay flow
+
+1. `generateStaticParams` asks the server-only recording store for its allowlisted
+   fixture slugs.
+2. The store loads and validates `public/replays/synthetic-success-v1.json`.
+3. The browser receives only that checked-in synthetic recording.
+4. For cursor `n`, the reducer considers only events whose sequence is `<= n`.
+5. Known event patches update Buyer, Merchant, PSP, and shared projections.
+   Unknown event types remain visible timeline facts but cannot mutate a view.
+6. Seeking or rewinding recomputes the projection from the immutable baseline;
+   it does not reverse a workflow or call an external system.
+
+The fixture contains no callback secret, reusable credential, PAN, or live
+customer data. Its provider-shaped reference begins `pi_demo_` and is not a
+Stripe object.
