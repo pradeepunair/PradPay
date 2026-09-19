@@ -1,81 +1,117 @@
 # ACP compatibility record
 
-Status: protocol snapshot verified; payment-handler/account compatibility pending.
+Status: pinned runtime checkout subset implemented locally; payment capabilities blocked.
 
-This record must describe what the implementation actually supports. It is not a
-claim that all ACP checkout or delegated-payment capabilities are available.
+This record describes only the local M2 application boundary. It does not claim
+provider, account, payment-handler, staging, or end-to-end payment compatibility.
 
 ## Pinned artifact
 
 | Field | Verified value | Evidence |
 | --- | --- | --- |
-| Released revision/version | `2026-04-17` | Official repository marks this as latest stable; previous `2026-01-30` deprecated |
-| Schema commit/hash | `7fdd78df677a94dce04c770644b0fbbb1401272b` | Exact upstream commit inspected 2026-09-08; file hashes in `protocol/acp/manifest.json` |
-| Changelog/release URL | `changelog/2026-04-17.md` at pinned commit | Stable snapshot changelog |
-| License and retained notices | Apache-2.0; OpenAI and Stripe notices | Pinned `LICENSE` and `NOTICE` hashes |
-| Required version headers | `API-Version: 2026-04-17` | Pinned checkout/delegate-payment OpenAPI definitions |
-| Authentication mechanism | Bearer authentication at the ACP server boundary | Pinned schema/RFC; PaymentLab credential issuance remains an application decision |
+| API revision | `2026-04-17` | Required `API-Version` value and vendored OpenAPI/JSON Schema snapshot |
+| Schema commit | `7fdd78df677a94dce04c770644b0fbbb1401272b` | `protocol/acp/manifest.json` and hash contract test |
+| License/notices | Apache-2.0; retained upstream notices | Vendored `LICENSE` and `NOTICE` hashes |
+| Authentication | Server-held bearer at the route boundary | `lib/acp/runtime/index.mjs` |
 
-The PRD's `2026-01-30` value was explicitly a candidate. Upstream now marks
-`2026-04-17` as the latest stable snapshot and deprecates `2026-01-30`, so
-ADR-0002 selects the newer stable snapshot. ACP remains beta; the commit and
-individual artifact hashes are pinned so later `main` changes cannot silently
-alter PaymentLab's contract.
+Artifact hashes prove that the repository snapshot matches the approved pin.
+They do not prove that an account supports a handler, that a provider is
+configured, or that a payment can be executed.
 
-## Operation support
+## Runtime routes
 
-| Operation | Pinned endpoint/schema | Implementation status | Contract-test evidence | Known omissions |
-| --- | --- | --- | --- | --- |
-| Create checkout | `POST /checkout_sessions` | schema verified; implementation not started | Upstream validation at pinned commit | PaymentLab supports one item/quantity one only |
-| Retrieve checkout | `GET /checkout_sessions/{checkout_session_id}` | schema verified; implementation not started | Upstream validation at pinned commit | — |
-| Update checkout | `POST /checkout_sessions/{checkout_session_id}` | schema verified; implementation not started | Upstream validation at pinned commit | Bounded MVP updates only |
-| Complete checkout | `POST /checkout_sessions/{checkout_session_id}/complete` | schema verified; payment path blocked | Upstream validation; account test pending | SPT/account support not yet verified |
-| Cancel checkout | `POST /checkout_sessions/{checkout_session_id}/cancel` | schema verified; implementation not started | Upstream validation at pinned commit | Pre-completion only |
-| Capability negotiation | Inline checkout capabilities plus `/.well-known/acp.json` discovery | schema verified; implementation not started | Pinned checkout schema | Advertise only implemented MVP services/handlers |
+The application mounts the pinned operation paths below `/api/acp`:
 
-## Payment-handler and credential path
+| Operation | Local route | Runtime status |
+| --- | --- | --- |
+| Create checkout | `POST /api/acp/checkout_sessions` | Implemented behind admission flag |
+| Retrieve checkout | `GET /api/acp/checkout_sessions/{checkoutSessionId}` | Implemented behind admission flag |
+| Update checkout | `POST /api/acp/checkout_sessions/{checkoutSessionId}` | Implemented behind admission flag |
+| Complete checkout | `POST /api/acp/checkout_sessions/{checkoutSessionId}/complete` | Contract pinned; always capability-blocked in M2 |
+| Cancel checkout | `POST /api/acp/checkout_sessions/{checkoutSessionId}/cancel` | Implemented behind admission flag |
+| Delegate payment | `POST /api/acp/agentic_commerce/delegate_payment` | Contract pinned; always capability-blocked in M2 |
 
-Record the actual supported test credential flow, authentication, handler schema,
-Stripe API version, test-account capability, and safe backend resolution path.
-Never paste credentials, client secrets, reusable tokens, PAN/CVV, or complete
-provider payloads.
+Every request requires:
 
-Decision outcomes:
+- `Authorization: Bearer <server-held token>`;
+- `API-Version: 2026-04-17`;
+- `PaymentLab-Session-Id` and `PaymentLab-Run-Id`, both matched to the authenticated server-side context;
+- `Idempotency-Key` on every mutation; and
+- `Content-Type: application/json` whenever a mutation body is present. The
+  pinned cancel operation may omit its optional body.
 
-1. Supported delegated-token path — document scope and validation.
-2. Pinned-ACP-supported custom handler — document the exact extension and label.
-3. No compatible handler — keep validated ACP checkout operations and identify
-   Stripe completion as a separate application extension. The product label must
-   say “ACP checkout subset + custom Stripe sandbox completion”.
-4. No safe supported completion path — mark Live Sandbox blocked and ship replay
-   only until the dependency changes.
+Browser-originated requests are denied when `Sec-Fetch-Site` is `cross-site` or
+when browser fetch metadata has no `Origin`; every supplied origin must be a
+configured canonical HTTP(S) origin. Opaque `null` origins are always denied.
+Server-to-server requests without browser origin headers remain eligible for
+bearer authentication. Each response receives a server-generated request ID;
+an inbound `Request-Id` is not trusted as the authoritative correlation ID.
 
-## Compatibility test matrix
+## Application port
 
-| Test | Expected | Status | Evidence |
-| --- | --- | --- | --- |
-| Requests validate against pinned schemas | All supported requests pass | planned | — |
-| Responses validate against pinned schemas | All supported responses pass | planned | — |
-| Version mismatch | Explicit safe error; no mixed fields | planned | — |
-| Missing/invalid server auth | Denied without checkout leakage | planned | — |
-| Cross-run checkout access | Denied | planned | — |
-| Mutation retry | Stable application idempotency behavior | planned | — |
-| Advertised capabilities | Exactly match implemented handlers/operations | planned | — |
-| Minimal test payment | One supported Stripe test sale and verified callback | planned | — |
+`configureAcpRuntimePort(port)` in `lib/application/acp-runtime.mjs` accepts an
+injected application port. Route code imports no persistence, provider, Stripe,
+or workflow implementation. The port methods are:
 
-### Schema verification performed
+- `createCheckout({context,input,idempotencyKey,requestId,apiVersion})`
+- `retrieveCheckout({context,checkoutSessionId,requestId,apiVersion})`
+- `updateCheckout({context,checkoutSessionId,input,idempotencyKey,requestId,apiVersion})`
+- `cancelCheckout({context,checkoutSessionId,input,idempotencyKey,requestId,apiVersion})`
 
-On 2026-09-08, the official repository's `pnpm validate:all` completed with no
-errors or warnings at the pinned commit. Each JSON Schema under
-`spec/2026-04-17/json-schema/` also compiled independently with AJV draft 2020.
+The pinned but blocked methods are named `completeCheckout` and
+`delegatePayment`. M2 route control flow never invokes either method, including
+when their reserved environment flags are set to `true`.
 
-The repository's broad `validate:json-schema` convenience command was not used
-as PaymentLab evidence because it loads all historical versions in one AJV
-process. Those snapshots intentionally reuse schema IDs, causing duplicate-ID
-errors; it also reports a historical 2025 schema incompatibility. PaymentLab
-will compile and test only the pinned `2026-04-17` artifacts.
+`context` is exactly `{subject,sessionId,runId}`. A mutation result is
+`{value,idempotentReplayed}` and a read result is `{value}`. The application port
+owns durable idempotency: identical scope/key/payload returns the stable prior
+result; a changed payload throws `new RuntimeError("idempotency_conflict")`.
+All port responses are validated against the vendored response definitions
+before serialization. The boundary additionally rejects every otherwise-valid
+checkout response that advertises a payment handler.
 
-## Approved compatibility statement
+## Validation and safe failures
 
-Pending. Write the shortest accurate public statement only after the tests above
-and ADR-0002/0003 are accepted.
+Create, update, complete, cancel, and delegate-payment request definitions and
+all six response definitions are pinned to the vendored schemas. Runtime-enabled
+operations validate input before invoking the port and validate output before
+returning it. When admission is enabled, blocked payment routes validate path,
+idempotency, content type, size, JSON, and the pinned request schema, then return
+`capability_blocked` before application-port invocation. Their unreachable
+response definitions remain testable offline with `validateAcpPayload`.
+
+All runtime errors serialize as exactly:
+
+`{code,message,retryable,requestId}`
+
+Unknown and provider-shaped exceptions map to a fixed `internal_error` message.
+Exception messages, provider payloads, tokens, card values, and internal fields
+are never copied into the response. Request bodies are stream-read with a 256
+KiB ceiling. `idempotency_in_flight` responses include the pinned `Retry-After`
+header.
+
+## Capability and handler statement
+
+No payment handler or discovery document is advertised. Checkout responses used
+for M2 tests contain `capabilities.payment.handlers: []`, and the runtime rejects
+non-empty handler lists from an injected port. Complete and delegated payment are
+defense-in-depth blocked after safe request validation and before
+application-port invocation. No Stripe/provider import or mutation exists in the
+ACP route or runtime packages.
+
+Accurate compatibility statement:
+
+“PaymentLab implements an authenticated, run-scoped ACP `2026-04-17` checkout
+contract subset for create, retrieve, update, and cancel. Complete and delegated
+payment remain unavailable, and no payment handler is advertised.”
+
+## Local evidence
+
+`test/m2-acp-runtime.test.mjs` covers enabled synthetic success, all six pinned
+contracts, malformed/unsupported input, version/auth/run ownership, mutation
+idempotency, origin bounds, response validation, safe provider-shaped error
+mapping, default-off admission, and unconditional no-payment capability blocks.
+`test/acp-contract.test.mjs` verifies the pinned artifact set and hashes.
+
+This is local synthetic evidence only. It is not provider delivery, payment,
+staging, QA, or release evidence.
