@@ -133,3 +133,27 @@ are not erased by local cleanup.
 The fixture contains no callback secret, reusable credential, PAN, or live
 customer data. Its provider-shaped reference begins `pi_demo_` and is not a
 Stripe object.
+
+## Milestone 2 transaction and migration flow
+
+Callers obtain a transaction with `withTransaction(work)` and pass its scoped
+client to persistence operations. A business mutation, `appendDomainEvent`, and
+`createOutboxJob` commit together or all roll back. Event sequence allocation
+updates the owning `(session_id, run_id)` row before insert, so cross-session
+access fails closed and concurrent committed writers remain contiguous.
+
+The local evidence harness creates a uniquely named disposable database inside
+`paymentlab-postgres`, applies migration `202609180001_m2_persistence_foundation`
+twice, inspects constraints and indexes, exercises transaction rollback and
+concurrent writers, rehearses the down/up cycle in a second disposable database,
+and drops both databases. It reads the container's configured PostgreSQL user and
+database names inside the container and never exposes credentials.
+
+Run focused evidence with:
+
+```text
+node --test test/m2-data-*.test.mjs
+```
+
+No hosted resource, provider call, credential, webhook destination, payment, or
+background dispatcher is created by this flow.

@@ -108,3 +108,29 @@ validated fictional catalog, and the source label
 `synthetic_development_fixture`. The checked-in
 store intentionally rejects integrated/live recording labels until a later
 publication gate exists.
+
+## Implemented Milestone 2 persistence foundation
+
+Migration `202609180001_m2_persistence_foundation` is additive and provider-neutral
+PostgreSQL 16 SQL under `db/migrations/`. It creates the session/run, checkout,
+quote, mandate/use, order, payment/attempt, webhook receipt, domain event, outbox,
+idempotency, reconciliation, and admission-usage records required by M2.
+
+Ownership is enforced by composite session/run foreign keys and every adapter
+lookup requires both the session and opaque resource ID. Monetary columns are
+`bigint` minor units. Partial unique indexes enforce one active payment attempt
+per checkout and one successful use per mandate. Provider event and outbox dedupe
+keys are unique. Provider references are unique only when both provider and
+reference are present, allowing multiple not-yet-submitted provider-neutral
+payments. Idempotency identity/request hashes are immutable after insert. Outbox
+leases carry owner, token, and expiry fencing fields; expired work at its retry
+limit becomes observably `dead` rather than remaining permanently leased.
+
+`append_domain_event` advances a locked run row and inserts the event in the
+caller's transaction, producing gap-free committed per-run sequences even under
+concurrency. Event schema versions remain explicit; existing recording schema
+`1.0.0` and its unknown-event behavior are unchanged.
+
+The down migration is a destructive rehearsal aid for uniquely named disposable
+test databases only. Operational rollback disables callers while retaining this
+additive schema and unresolved records.
