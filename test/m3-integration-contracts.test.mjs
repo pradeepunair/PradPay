@@ -26,6 +26,12 @@ function createIntegratedPool() {
       if (text.startsWith("SELECT reserve_synthetic_budget")) {
         return { rows: [{ outcome: { status: "reserved", record: { id: values[0] } } }] };
       }
+      if (text.startsWith("UPDATE payment_attempts SET state='unknown'")) {
+        return { rows: [{ id: values[2], session_id: values[0], run_id: values[1], operation_key: values[3], state: "unknown" }], rowCount: 1 };
+      }
+      if (text.startsWith("SELECT * FROM payment_attempts") && text.includes("state='unknown'")) {
+        return { rows: [{ id: values[2], session_id: values[0], run_id: values[1], operation_key: "operation_integration_1", state: "unknown" }] };
+      }
       if (text.startsWith("INSERT INTO synthetic_reconciliation_controls")) {
         return { rows: [{ id: values[0], session_id: values[1], run_id: values[2], attempt_id: values[3], state: "pending" }] };
       }
@@ -132,6 +138,7 @@ test("real adapters compose safety admission, stable unknown recovery, and one o
   assert.equal(result.createReplacementAttempt, false);
   assert.equal(result.reconciliation.status, "created");
   assert.deepEqual([...pool.outbox], ["reconcile:attempt_integration_1"]);
+  assert.equal(pool.calls.some(({ text }) => text.startsWith("UPDATE payment_attempts SET state='unknown'")), true);
   assert.equal(pool.calls.some(({ text }) => text.startsWith("INSERT INTO synthetic_reconciliation_controls")), true);
   assert.equal(pool.calls.some(({ text }) => text.startsWith("INSERT INTO outbox_jobs")), true);
 });
@@ -148,6 +155,13 @@ test("PostgreSQL persistence composes durable non-payment ACP create/replay/retr
   const first = await applicationPort.createCheckout(createArgs());
   assert.equal(first.idempotentReplayed, false);
   assert.deepEqual(first.value.capabilities.payment.handlers, []);
+  assert.equal(first.value.line_items.length, 1);
+  assert.deepEqual(first.value.line_items[0], {
+    id: "item_1",
+    item: { id: "item_1" },
+    quantity: 1,
+    totals: [],
+  });
 
   const replay = await applicationPort.createCheckout(createArgs({
     input: { capabilities: {}, currency: "usd", line_items: [{ id: "item_1" }] },
@@ -179,6 +193,14 @@ test("PostgreSQL persistence composes durable non-payment ACP create/replay/retr
   assert.equal(canceled.value.status, "canceled");
   assert.deepEqual(canceled.value.capabilities.payment.handlers, []);
 
+  const updateAfterCancel = await applicationPort.updateCheckout(createArgs({
+    checkoutSessionId: first.value.id,
+    input: { order_notes: "Must remain canceled" },
+    idempotencyKey: "idem_update_after_cancel_1",
+  }));
+  assert.equal(updateAfterCancel.value.status, "canceled");
+  assert.deepEqual(updateAfterCancel.value.capabilities.payment.handlers, []);
+
   await assert.rejects(
     applicationPort.createCheckout(createArgs({ input: { ...createInput, currency: "eur" } })),
     (error) => error instanceof RuntimeError && error.code === "idempotency_conflict",
@@ -195,5 +217,5 @@ test("PostgreSQL persistence composes durable non-payment ACP create/replay/retr
   );
 
   assert.equal(pool.calls.filter(({ text }) => text.startsWith("INSERT INTO checkouts")).length, 1);
-  assert.equal(pool.calls.filter(({ text }) => text.startsWith("SELECT claim_idempotency")).length, 5);
+  assert.equal(pool.calls.filter(({ text }) => text.startsWith("SELECT claim_idempotency")).length, 6);
 });
