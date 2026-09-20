@@ -12,10 +12,13 @@ Source packages and integrated commits
 - Engineering plan: `4af65a59444fdcc738ea786ac4bdd63bf455eb7c` -> `4af65a5`.
 - M3.1 plan correction: `51be74f9c9c4bef72e563585316d40488d1bd5b3` -> `51be74f`.
 - Data source: `a1df6db92d24a08872d21926440a0eb25194a104` -> integrated `87251a3`.
+- Data durability/ACP correction: `c7f6f801af3dd1fb5e451c4768769bc239ac8a6c` -> integrated `f0c82b1`.
 - Reliability source: `0f3caa4fcfb4b7cb8ae62fded0497297d53e3fdf` -> integrated `fd29a94`.
 - Reliability correction: `8b2f7116fb16bc4956d31cda9693657960f43f28` -> integrated `27380a5`.
+- Reliability durable-attempt/refusal correction: `a5ebdae10da7db515cacd4a3accf9e32f79fcbd3` -> integrated `9637002`.
 - Application source: `a659cb83e88a9f4ba8bee7f0292681cca3ad34cc` -> integrated `150f535`.
 - Integration contracts/schema projection fix: `c2f47a81cad0fad7d34e21069819cc3bb7668df9`.
+- Corrected integration contract tests: `4fbaf0b4f91d79c8298ccfd6a83f9973ba75255e`.
 
 Integration decisions
 
@@ -25,14 +28,15 @@ Integration decisions
 - `createLocalSafetyController({persistence})` defaults closed and permits only durable-attempt-verified reconciliation after admission is disabled.
 - `createLocalWebhookComposition` requires an injected pg-compatible pool, endpoint secret, transaction-scoped provider-reference resolver, allowlisted event set, and business callback. It creates no connection at import and exposes no provider mutation client.
 - `createLocalAcpComposition({persistence})` uses the concrete PostgreSQL persistence interface for create/retrieve/update/cancel only.
-- Request line-item shapes are not projected directly as ACP response `LineItem` records. The integrated persistence returns an empty canonical response list until a bounded business resolver creates schema-valid response items, preventing invalid data from escaping.
+- ACP request `Item` records are durably projected to pinned-schema-valid response `LineItem` records as `{id,item,quantity:1,totals:[]}`. Compatible buyer, fulfillment, locale, timezone, metadata, and quote fields are retained. Update/cancel lock the owned rows and cancellation is monotonic.
 - Complete and delegate-payment remain hard-blocked before application-port invocation. Every response advertises `capabilities.payment.handlers: []`.
 
 Defects found and corrected during integration
 
 1. Reliability review found that a post-effect callback rejection could strand an unknown effect without reconciliation. Correction `8b2f711` converts it to stable unknown and atomically schedules one deduplicated action.
-2. Reliability review found caller-asserted unknown status, kill-switch reconciliation discontinuity, and permissive opaque-reference authorization. Correction `8b2f711` requires durable attempt state and a transaction-scoped resolver while allowing verified reconciliation with admission disabled.
-3. Cross-package ACP execution found that raw create-request line items produced an invalid pinned ACP response. Integration commit `c2f47a8` keeps response items canonical/empty until resolved and adds concrete adapter tests.
+2. Reliability review found caller-asserted unknown status, kill-switch reconciliation discontinuity, and permissive opaque-reference authorization. Corrections `8b2f711` and `a5ebdae` require a transaction-scoped resolver, an owned durable `unknown` attempt plus pending control, and allow verified reconciliation while admission is disabled.
+3. Cross-package ACP execution found that raw create-request items were not response `LineItem` records. The temporary empty projection in `c2f47a8` prevented invalid responses; data correction `c7f6f80` then added the pinned-schema-valid durable projection without discarding the cart.
+4. Final review found kill-switch refusals bypassed durable admission decisions, reconciliation controls did not prove attempt state, and ACP cancel could be revived. Corrections `c7f6f80` and `a5ebdae` add durable denial replay/conflict, owner/operation-scoped unknown transitions, dual attempt/control verification, row locking, and monotonic cancellation.
 
 PostgreSQL evidence
 
@@ -42,7 +46,7 @@ Focused command:
 
 `node --test test/m3-data-*.test.mjs test/m3-reliability-*.test.mjs test/m3-acp-composition.test.mjs test/m3-integration-contracts.test.mjs`
 
-Result: 61 passed, 0 failed, 0 skipped.
+Result after all specialist corrections: 70 passed, 0 failed, 0 skipped.
 
 This includes:
 
@@ -52,7 +56,11 @@ This includes:
 - Atomic reservation rollback.
 - Stable reserved/denied replay and changed-input conflict.
 - Admission-disabled reconciliation continuity.
+- Durable unknown-attempt transition and terminal/fabricated-attempt rejection.
+- Durable kill-switch refusal replay and changed-request conflict with zero provider calls.
 - Scoped ACP data operations.
+- Concurrent update/cancel serialization with terminal canceled state.
+- Pinned-schema-valid durable ACP cart projection.
 - Seven deterministic synthetic fault scenarios.
 - Post-effect callback failure and exactly-one reconciliation scheduling.
 - Transaction-scoped webhook authorization and rollback behavior.
@@ -61,7 +69,7 @@ This includes:
 
 Full verification before evidence commit
 
-- `npm test`: 167 passed, 0 failed, 0 skipped.
+- `npm test`: 176 passed, 0 failed, 0 skipped.
 - `./node_modules/.bin/tsc --noEmit`: exit 0, no diagnostics.
 - `npm run docs:phases:check`: passed; seven generated pages plus index current; six Markdown/HTML phase pairs, template, navigation, structure, and links validated.
 - `npm run build`: passed; Next.js 16.3.4 compiled, typechecked, and generated 4/4 static pages.
