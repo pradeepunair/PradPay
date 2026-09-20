@@ -32,7 +32,13 @@ function createSafetyPersistence({
 } = {}) {
   const reservations = new Map();
   const outbox = new Map();
-  const attempts = new Set([`${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`]);
+  const attempts = new Map([[`${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`, {
+    id: baseClaim.attemptId,
+    session_id: baseClaim.sessionId,
+    run_id: baseClaim.runId,
+    operation_key: baseClaim.operationId,
+    state: "submitted",
+  }]]);
   const reconciliation = new Map();
   const calls = { read: 0, reserve: 0, reconciliationRead: 0 };
   return {
@@ -44,6 +50,7 @@ function createSafetyPersistence({
       const snapshots = {
         reservations: new Map(reservations),
         outbox: new Map(outbox),
+        attempts: new Map([...attempts].map(([key, value]) => [key, { ...value }])),
         reconciliation: new Map(reconciliation),
       };
       try {
@@ -51,9 +58,11 @@ function createSafetyPersistence({
       } catch (error) {
         reservations.clear();
         outbox.clear();
+        attempts.clear();
         reconciliation.clear();
         for (const [key, value] of snapshots.reservations) reservations.set(key, value);
         for (const [key, value] of snapshots.outbox) outbox.set(key, value);
+        for (const [key, value] of snapshots.attempts) attempts.set(key, value);
         for (const [key, value] of snapshots.reconciliation) reconciliation.set(key, value);
         throw error;
       }
@@ -69,17 +78,35 @@ function createSafetyPersistence({
     async reserveSyntheticBudget(tx, claim) {
       calls.reserve += 1;
       if (failReserve) throw new Error("sensitive reservation detail");
-      if (reserveStatus !== "reserved") return { status: reserveStatus };
       const key = `${claim.environment}:${claim.operationKey}:${claim.attemptId}`;
       const existing = tx.reservations.get(key);
       if (existing) {
-        return existing.requestHash === claim.requestHash
-          ? { status: "replay", record: existing }
-          : { status: "conflict", record: existing };
+        if (existing.requestHash !== claim.requestHash || existing.amountMinor !== claim.amountMinor
+          || existing.policyId !== claim.policyId) {
+          return { status: "conflict", record: existing };
+        }
+        return {
+          status: existing.decision === "reserved" ? "replay" : existing.decision,
+          record: existing,
+        };
       }
-      const record = Object.freeze({ ...claim, reservationId: "reservation_m3" });
+      const decision = enabled ? reserveStatus : "kill_switch";
+      const record = Object.freeze({ ...claim, decision, reservationId: "reservation_m3" });
       tx.reservations.set(key, record);
-      return { status: "reserved", record };
+      return { status: decision, record };
+    },
+    async markPaymentAttemptUnknown(tx, scope) {
+      const key = `${scope.sessionId}:${scope.runId}:${scope.attemptId}`;
+      const attempt = tx.attempts.get(key);
+      if (!attempt || attempt.operation_key !== scope.operationId) return { status: "rejected" };
+      if (!["submitted", "processing", "unknown"].includes(attempt.state)) return { status: "rejected" };
+      const record = { ...attempt, state: "unknown" };
+      tx.attempts.set(key, record);
+      return { status: "updated", attempt: record };
+    },
+    async readUnknownPaymentAttempt(tx, scope) {
+      const attempt = tx.attempts.get(`${scope.sessionId}:${scope.runId}:${scope.attemptId}`);
+      return attempt?.state === "unknown" ? attempt : null;
     },
     async upsertReconciliationControl(tx, control) {
       const key = `${control.sessionId}:${control.runId}:${control.attemptId}`;
@@ -133,6 +160,14 @@ test("safety persistence facade composes Dax data ports with reliability outbox 
       reservedClaim = claim;
       return { status: "reserved", record: { id: claim.id } };
     },
+    async markPaymentAttemptUnknown(receivedTx, scope) {
+      assert.equal(receivedTx, tx);
+      return { ...scope, state: "unknown" };
+    },
+    async readUnknownPaymentAttempt(receivedTx, scope) {
+      assert.equal(receivedTx, tx);
+      return { ...scope, state: "unknown" };
+    },
     async upsertReconciliationControl() {},
     async readReconciliationControl() {},
   };
@@ -157,6 +192,19 @@ test("safety persistence facade composes Dax data ports with reliability outbox 
     attemptId: baseClaim.attemptId,
     requestHash: baseClaim.requestHash,
     amountMinor: baseClaim.amountMinor,
+  });
+  const scope = {
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
+  };
+  assert.deepEqual(await persistence.markPaymentAttemptUnknown(tx, {
+    ...scope,
+    operationId: baseClaim.operationId,
+  }), { ...scope, operationId: baseClaim.operationId, state: "unknown" });
+  assert.deepEqual(await persistence.readUnknownPaymentAttempt(tx, scope), {
+    ...scope,
+    state: "unknown",
   });
   await persistence.createOutboxJob(tx, { type: "payment.reconcile_unknown", dedupeKey: "reconcile:attempt_m3" });
   assert.deepEqual(outboxJob, { type: "payment.reconcile_unknown", dedupeKey: "reconcile:attempt_m3" });
@@ -306,16 +354,49 @@ for (const [label, persistence, expectedStatus] of [
     assert.equal(result.status, expectedStatus);
     assert.equal(result.admitted, false);
     assert.equal(provider.inspect().calls, 0);
+    if (label === "kill switch") assert.equal(persistence.calls.reserve, 1);
+    if (label === "control adapter failure") assert.equal(persistence.calls.reserve, 0);
   });
 }
 
-test("missing control defaults disabled without attempting budget reservation", async () => {
-  const persistence = createSafetyPersistence();
+test("missing control records a durable kill-switch refusal without provider calls", async () => {
+  const persistence = createSafetyPersistence({ enabled: false });
   persistence.readSafetyControl = async () => null;
   const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
   const result = await createLocalSafetyController({ persistence }).executeSynthetic({ claim: baseClaim, provider });
   assert.equal(result.status, "kill_switch");
-  assert.equal(persistence.calls.reserve, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(provider.inspect().calls, 0);
+});
+
+test("disabled control with inconsistent reservation fails closed without provider calls", async () => {
+  const persistence = createSafetyPersistence({ enabled: true });
+  persistence.readSafetyControl = async () => ({
+    paymentAdmissionEnabled: false,
+    version: 2,
+    reasonCode: "operator_kill",
+  });
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
+  const result = await createLocalSafetyController({ persistence }).executeSynthetic({ claim: baseClaim, provider });
+  assert.equal(result.status, "adapter_failure");
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(provider.inspect().calls, 0);
+});
+
+test("kill-switch refusal replays durably and changed claims conflict without provider calls", async () => {
+  const persistence = createSafetyPersistence({ enabled: false });
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
+  const controller = createLocalSafetyController({ persistence });
+  const first = await controller.executeSynthetic({ claim: baseClaim, provider });
+  const replay = await controller.executeSynthetic({ claim: baseClaim, provider });
+  const conflict = await controller.executeSynthetic({
+    claim: { ...baseClaim, requestHash: "b".repeat(64) },
+    provider,
+  });
+  assert.equal(first.status, "kill_switch");
+  assert.equal(replay.status, "kill_switch");
+  assert.equal(conflict.status, "conflict");
+  assert.equal(persistence.calls.reserve, 3);
   assert.equal(provider.inspect().calls, 0);
 });
 
@@ -346,9 +427,32 @@ test("post-effect callback failure becomes stable unknown and schedules one reco
   assert.equal(first.reconciliation.status, "created");
   assert.equal(replay.reconciliation.status, "duplicate");
   assert.equal(first.createReplacementAttempt, false);
+  assert.equal(persistence.attempts.get(`${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`).state, "unknown");
   assert.equal(persistence.reconciliation.size, 1);
   assert.equal(persistence.outbox.size, 1);
   assert.deepEqual(provider.inspect(), { calls: 2, effects: 1, operations: 1 });
+});
+
+test("rejected Dax mark envelope cannot fabricate an unknown attempt", async () => {
+  const persistence = createSafetyPersistence();
+  persistence.markPaymentAttemptUnknown = async (_tx, scope) => ({
+    status: "rejected",
+    attempt: {
+      id: scope.attemptId,
+      session_id: scope.sessionId,
+      run_id: scope.runId,
+      operation_key: scope.operationId,
+      state: "unknown",
+    },
+  });
+  const provider = createSyntheticPaymentProvider({ scenario: "timeout_after_effect" });
+  const controller = createLocalSafetyController({ persistence });
+  await assert.rejects(
+    controller.executeSynthetic({ claim: baseClaim, provider }),
+    /mark and verify the durable payment attempt/i,
+  );
+  assert.equal(persistence.reconciliation.size, 0);
+  assert.equal(persistence.outbox.size, 0);
 });
 
 test("outbox failure rolls back unknown-control creation atomically", async () => {
@@ -361,18 +465,27 @@ test("outbox failure rolls back unknown-control creation atomically", async () =
   );
   assert.equal(persistence.reconciliation.size, 0);
   assert.equal(persistence.outbox.size, 0);
+  assert.equal(persistence.attempts.get(`${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`).state, "submitted");
   assert.deepEqual(provider.inspect(), { calls: 1, effects: 1, operations: 1 });
 });
 
 test("existing reconciliation is durably verified and remains schedulable while admission is disabled", async () => {
   const persistence = createSafetyPersistence({ enabled: false });
   const controller = createLocalSafetyController({ persistence });
-  await persistence.withTransaction((tx) => persistence.upsertReconciliationControl(tx, {
-    id: "reconciliation_attempt_m3",
-    sessionId: baseClaim.sessionId,
-    runId: baseClaim.runId,
-    attemptId: baseClaim.attemptId,
-  }));
+  await persistence.withTransaction(async (tx) => {
+    await persistence.markPaymentAttemptUnknown(tx, {
+      sessionId: baseClaim.sessionId,
+      runId: baseClaim.runId,
+      attemptId: baseClaim.attemptId,
+      operationId: baseClaim.operationId,
+    });
+    await persistence.upsertReconciliationControl(tx, {
+      id: "reconciliation_attempt_m3",
+      sessionId: baseClaim.sessionId,
+      runId: baseClaim.runId,
+      attemptId: baseClaim.attemptId,
+    });
+  });
   const first = await controller.scheduleExistingReconciliation({
     sessionId: baseClaim.sessionId,
     runId: baseClaim.runId,
@@ -388,6 +501,46 @@ test("existing reconciliation is durably verified and remains schedulable while 
   assert.equal(persistence.outbox.size, 1);
   assert.equal(persistence.calls.read, 0);
   assert.equal(persistence.calls.reconciliationRead, 2);
+});
+
+test("wrapped unknown-attempt read is rejected because Dax contract is row or null", async () => {
+  const persistence = createSafetyPersistence({ enabled: false });
+  const key = `${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`;
+  const unknown = { ...persistence.attempts.get(key), state: "unknown" };
+  persistence.attempts.set(key, unknown);
+  await persistence.withTransaction((tx) => persistence.upsertReconciliationControl(tx, {
+    id: "reconciliation_wrapped_m3",
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
+  }));
+  persistence.readUnknownPaymentAttempt = async () => ({ status: "found", attempt: unknown });
+  const controller = createLocalSafetyController({ persistence });
+  await assert.rejects(controller.scheduleExistingReconciliation({
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
+  }), /durable unknown attempt/i);
+  assert.equal(persistence.outbox.size, 0);
+});
+
+test("pending control cannot reconcile a terminal durable attempt", async () => {
+  const persistence = createSafetyPersistence({ enabled: false });
+  const key = `${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`;
+  persistence.attempts.set(key, { ...persistence.attempts.get(key), state: "succeeded" });
+  await persistence.withTransaction((tx) => persistence.upsertReconciliationControl(tx, {
+    id: "reconciliation_terminal_m3",
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
+  }));
+  const controller = createLocalSafetyController({ persistence });
+  await assert.rejects(controller.scheduleExistingReconciliation({
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
+  }), /durable unknown attempt/i);
+  assert.equal(persistence.outbox.size, 0);
 });
 
 test("caller-supplied unknown status cannot fabricate reconciliation", async () => {
