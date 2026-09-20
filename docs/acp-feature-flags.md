@@ -1,4 +1,4 @@
-# M2 ACP runtime feature flags
+# M2/M3 ACP runtime feature flags
 
 All values are server-only environment settings. None may use a `NEXT_PUBLIC_`
 prefix or be exposed to browser code. A value enables a flag only when it is the
@@ -34,3 +34,17 @@ Rollback is to unset or set `ACP_RUNTIME_ADMISSION_ENABLED=false`. That stops ne
 ACP checkout admission without changing persisted records. The complete and
 delegate-payment routes require a future reviewed code change, not merely a flag
 change, before they can invoke any application/provider behavior.
+
+## M3 local composition
+
+`createLocalAcpComposition({persistence})` is explicit and flag-neutral. Creating
+the composition does not call `configureAcpRuntimePort`, inspect credentials,
+open a pool, or set `ACP_RUNTIME_ADMISSION_ENABLED`. Integration must separately
+inject the returned `applicationPort` and opt into admission through the existing
+server-only flag. A missing repository fails during explicit composition; an
+adapter failure returns a safe `service_unavailable` through the runtime.
+
+Turning admission off is the M3 application rollback. Persisted checkouts and
+idempotency responses remain intact for later inspection/recovery. Reserved
+complete/delegate flags remain non-operative because the runtime code block and
+the composed port both omit payment execution capability.

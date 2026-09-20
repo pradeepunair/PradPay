@@ -1,8 +1,8 @@
 # ACP compatibility record
 
-Status: pinned runtime checkout subset implemented locally; payment capabilities blocked.
+Status: pinned runtime checkout subset composed locally with durable repository ports; payment capabilities blocked.
 
-This record describes only the local M2 application boundary. It does not claim
+This record describes only the local M2/M3 application boundary. It does not claim
 provider, account, payment-handler, staging, or end-to-end payment compatibility.
 
 ## Pinned artifact
@@ -70,6 +70,35 @@ All port responses are validated against the vendored response definitions
 before serialization. The boundary additionally rejects every otherwise-valid
 checkout response that advertises a payment handler.
 
+### M3 local durable composition
+
+`createLocalAcpApplicationPort({persistence})` in
+`lib/application/local-acp-port.mjs` implements only create, retrieve, update,
+and cancel. `createLocalAcpComposition({persistence})` returns that explicit port
+without registering it globally, changing admission, reading environment
+variables, opening a pool, or connecting at module import.
+
+The injected M3 repository contract is transaction-scoped:
+
+- `withTransaction(work)`
+- `claimAcpIdempotency(tx, claim)` -> `created`, `replay` with the persisted
+  response, or `conflict`
+- `storeAcpIdempotentResponse(tx, record)` -> `stored`
+- `createAcpCheckout`, `retrieveAcpCheckout`, `updateAcpCheckout`, and
+  `cancelAcpCheckout`, each receiving subject/session/run/request/version scope
+  and returning explicit status/checkout envelopes
+
+Mutation scope and SHA-256 request hashes exclude the generated request ID, so a
+retry with a new correlation ID replays the exact durable prior response. A
+changed body conflicts. Repository access always includes subject, session, and
+run; an opaque checkout ID alone is insufficient. Before returning, the
+application port replaces any repository payment-handler list with `[]` and
+validates the resulting response against the pinned vendored schema.
+
+The composed port has no `completeCheckout` or `delegatePayment` methods. The
+existing runtime hard blocks remain unchanged and execute before a payment
+method lookup even when reserved flags are true.
+
 ## Validation and safe failures
 
 Create, update, complete, cancel, and delegate-payment request definitions and
@@ -112,6 +141,11 @@ contracts, malformed/unsupported input, version/auth/run ownership, mutation
 idempotency, origin bounds, response validation, safe provider-shaped error
 mapping, default-off admission, and unconditional no-payment capability blocks.
 `test/acp-contract.test.mjs` verifies the pinned artifact set and hashes.
+
+`test/m3-acp-composition.test.mjs` adds repository-fake evidence for transactional
+CRUD, durable replay/conflict, cross-owner isolation, response validation, empty
+handlers, missing/failing repository behavior, disabled admission, and unchanged
+complete/delegate hard blocks.
 
 This is local synthetic evidence only. It is not provider delivery, payment,
 staging, QA, or release evidence.
