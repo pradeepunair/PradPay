@@ -6,6 +6,8 @@ import { createLocalWebhookComposition } from "../lib/composition/local-webhook.
 
 const endpointSecret = "local_m3_signing_secret_for_tests";
 const nowSeconds = 1_788_921_000;
+const authorizedScope = Object.freeze({ authorized: true, sessionId: "session_m3", runId: "run_m3" });
+const resolveAuthorized = async () => authorizedScope;
 
 function payload(overrides = {}) {
   return JSON.stringify({
@@ -57,18 +59,29 @@ function createPool({ receiptOutcome = "created", failReceipt = false } = {}) {
   };
 }
 
-test("local webhook composition requires pool, secret, and business callback", () => {
+test("local webhook composition requires pool, secret, resolver authorization, and business callback", () => {
   const pool = createPool();
   assert.throws(() => createLocalWebhookComposition({
     endpointSecret,
+    resolveProviderReference: resolveAuthorized,
     applyBusinessEvent: async () => ({ disposition: "applied" }),
   }), /pool/i);
   assert.throws(() => createLocalWebhookComposition({
     pool,
     endpointSecret: "",
+    resolveProviderReference: resolveAuthorized,
     applyBusinessEvent: async () => ({ disposition: "applied" }),
   }), /endpointSecret/i);
-  assert.throws(() => createLocalWebhookComposition({ pool, endpointSecret }), /applyBusinessEvent/i);
+  assert.throws(() => createLocalWebhookComposition({
+    pool,
+    endpointSecret,
+    applyBusinessEvent: async () => ({ disposition: "applied" }),
+  }), /resolveProviderReference/i);
+  assert.throws(() => createLocalWebhookComposition({
+    pool,
+    endpointSecret,
+    resolveProviderReference: resolveAuthorized,
+  }), /applyBusinessEvent/i);
 });
 
 test("composition does not connect until a request is handled", () => {
@@ -76,6 +89,7 @@ test("composition does not connect until a request is handled", () => {
   const composition = createLocalWebhookComposition({
     pool,
     endpointSecret,
+    resolveProviderReference: resolveAuthorized,
     now: () => nowSeconds * 1000,
     applyBusinessEvent: async () => ({ disposition: "applied" }),
   });
@@ -89,24 +103,33 @@ test("local composition verifies, records, applies allowlisted state, commits, t
   const composition = createLocalWebhookComposition({
     pool,
     endpointSecret,
+    resolveProviderReference: async (tx, event) => {
+      assert.ok(tx);
+      assert.equal(event.objectId, "pi_m3_local");
+      pool.trace.push("RESOLVE");
+      return authorizedScope;
+    },
     now: () => nowSeconds * 1000,
-    applyBusinessEvent: async (_tx, event) => {
+    applyBusinessEvent: async (_tx, event, authorization) => {
       pool.trace.push("APPLY");
-      applied.push(event);
+      applied.push({ event, authorization });
       return { disposition: "applied" };
     },
   });
   const response = await composition.post(requestFor(payload()));
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { received: true, disposition: "applied" });
-  assert.deepEqual(pool.trace, ["BEGIN", "RECEIPT", "APPLY", "COMMIT", "RELEASE"]);
+  assert.deepEqual(pool.trace, ["BEGIN", "RECEIPT", "RESOLVE", "APPLY", "COMMIT", "RELEASE"]);
   assert.equal(applied.length, 1);
   assert.deepEqual(applied[0], {
-    provider: "stripe",
-    providerEventId: "evt_m3_local",
-    type: "payment_intent.succeeded",
-    providerCreatedAt: nowSeconds - 5,
-    objectId: "pi_m3_local",
+    event: {
+      provider: "stripe",
+      providerEventId: "evt_m3_local",
+      type: "payment_intent.succeeded",
+      providerCreatedAt: nowSeconds - 5,
+      objectId: "pi_m3_local",
+    },
+    authorization: authorizedScope,
   });
 });
 
@@ -116,6 +139,7 @@ test("unknown event type is durably received and safely ignored", async () => {
   const composition = createLocalWebhookComposition({
     pool,
     endpointSecret,
+    resolveProviderReference: resolveAuthorized,
     now: () => nowSeconds * 1000,
     applyBusinessEvent: async () => { applied += 1; },
   });
@@ -132,6 +156,7 @@ test("unknown object type is durably received but ignored before state mutation"
   const composition = createLocalWebhookComposition({
     pool,
     endpointSecret,
+    resolveProviderReference: resolveAuthorized,
     now: () => nowSeconds * 1000,
     applyBusinessEvent: async () => { applied += 1; },
   });
@@ -151,6 +176,7 @@ test("unsupported provider reference is received but cannot reach state mutation
   const composition = createLocalWebhookComposition({
     pool,
     endpointSecret,
+    resolveProviderReference: resolveAuthorized,
     now: () => nowSeconds * 1000,
     applyBusinessEvent: async () => { applied += 1; },
   });
@@ -164,12 +190,53 @@ test("unsupported provider reference is received but cannot reach state mutation
   assert.deepEqual(pool.trace, ["BEGIN", "RECEIPT", "COMMIT", "RELEASE"]);
 });
 
+test("opaque provider reference cannot authorize or acknowledge when resolver is unresolved", async () => {
+  const pool = createPool();
+  let applied = 0;
+  const composition = createLocalWebhookComposition({
+    pool,
+    endpointSecret,
+    resolveProviderReference: async () => {
+      pool.trace.push("RESOLVE");
+      return null;
+    },
+    now: () => nowSeconds * 1000,
+    applyBusinessEvent: async () => { applied += 1; },
+  });
+  const response = await composition.post(requestFor(payload()));
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "Webhook receipt could not be durably recorded." });
+  assert.equal(applied, 0);
+  assert.deepEqual(pool.trace, ["BEGIN", "RECEIPT", "RESOLVE", "ROLLBACK", "RELEASE"]);
+});
+
+test("resolver failure rolls back the receipt and never mutates", async () => {
+  const pool = createPool();
+  let applied = 0;
+  const composition = createLocalWebhookComposition({
+    pool,
+    endpointSecret,
+    resolveProviderReference: async () => {
+      pool.trace.push("RESOLVE");
+      throw new Error("private resolver failure");
+    },
+    now: () => nowSeconds * 1000,
+    applyBusinessEvent: async () => { applied += 1; },
+  });
+  const response = await composition.post(requestFor(payload()));
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "Webhook receipt could not be durably recorded." });
+  assert.equal(applied, 0);
+  assert.deepEqual(pool.trace, ["BEGIN", "RECEIPT", "RESOLVE", "ROLLBACK", "RELEASE"]);
+});
+
 test("duplicate receipt is acknowledged without a second business mutation", async () => {
   const pool = createPool({ receiptOutcome: "duplicate" });
   let applied = 0;
   const composition = createLocalWebhookComposition({
     pool,
     endpointSecret,
+    resolveProviderReference: resolveAuthorized,
     now: () => nowSeconds * 1000,
     applyBusinessEvent: async () => { applied += 1; },
   });
@@ -185,6 +252,7 @@ test("receipt persistence failure returns 503, rolls back, and never acknowledge
   const composition = createLocalWebhookComposition({
     pool,
     endpointSecret,
+    resolveProviderReference: resolveAuthorized,
     now: () => nowSeconds * 1000,
     applyBusinessEvent: async () => { applied += 1; },
   });
@@ -200,6 +268,7 @@ test("business mutation failure rolls back the receipt and returns 503", async (
   const composition = createLocalWebhookComposition({
     pool,
     endpointSecret,
+    resolveProviderReference: resolveAuthorized,
     now: () => nowSeconds * 1000,
     applyBusinessEvent: async () => {
       pool.trace.push("APPLY");

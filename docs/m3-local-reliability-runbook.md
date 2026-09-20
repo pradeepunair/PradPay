@@ -4,24 +4,30 @@ Scope and authority
 
 This package is local and synthetic only. It does not authorize Stripe or other provider calls, provider credentials, webhook destinations, hosted resources, deployment, DNS, payment, Live Sandbox, push, PR, or merge. PostgreSQL remains business truth. No module starts a server, worker, timer, or connection at import.
 
+Authoritative product contract: `/Users/pradeepnair/Documents/GitHub/PRADPAY-m3-local/docs/product/paymentlab-ai-m3-readiness.md`, version `M3.1-readiness`. External gates and full M3 acceptance remain unauthorized.
+
 Interfaces
 
 `createLocalSafetyController({persistence})`
+
+Construct the injected port with `createLocalSafetyPersistence({dataPersistence,outboxPersistence})`: `dataPersistence` is Dax's transaction-scoped PostgreSQL port and `outboxPersistence` is the accepted reliability adapter. This avoids sending reliability-shaped `{type,dedupeKey,...}` jobs directly to Dax's raw `{id,kind,...}` outbox method.
 
 Required transaction ports:
 
 - `withTransaction(work)`
 - `readSafetyControl(tx, {environment})` -> `{paymentAdmissionEnabled,version,reasonCode}` or null
 - `reserveSyntheticBudget(tx, claim)` -> `{status:"reserved"|"replay"|"conflict"|"kill_switch"|"budget_exhausted",record?}`
+- `upsertReconciliationControl(tx, control)`; its scoped payment-attempt foreign key verifies the durable attempt before unknown-outcome scheduling
+- `readReconciliationControl(tx, {sessionId,runId,attemptId})`; only a matching durable `pending` control authorizes existing-attempt scheduling
 - reliability-shaped `createOutboxJob(tx, job)` for the existing unknown-attempt reconciliation action
 
 Methods:
 
 - `admitSynthetic(claim)` reads the durable control and reserves budget in one transaction. Missing control, disabled admission, ambiguous/invalid adapter response, or adapter exception fails closed.
-- `executeSynthetic({claim,provider,onCallback?})` invokes `provider.execute` only after `reserved` or `replay`. Kill, budget exhaustion, conflict, and adapter failure produce zero provider invocations. A synthetic unknown result preserves the same scoped operation/attempt and immediately schedules the dedupe-keyed reconciliation job before returning `status:"unknown"`; it never creates a replacement attempt.
-- `permitExistingReconciliation(operation)` permits only a scoped existing `unknown` operation/attempt and explicitly forbids a replacement attempt. It does not read admission state, so disabling new admission cannot strand prior ambiguous work.
+- `executeSynthetic({claim,provider,onCallback?})` invokes `provider.execute` only after `reserved` or `replay`. Kill, budget exhaustion, conflict, and adapter failure produce zero provider invocations. A timeout or callback rejection after an effect becomes the stable unknown outcome, atomically upserts its durable reconciliation control and dedupe-keyed outbox job, preserves the same attempt, and never creates a replacement.
+- `scheduleExistingReconciliation({sessionId,runId,attemptId})` reads and verifies the matching durable pending reconciliation control before scheduling. Caller-supplied status is ignored and cannot fabricate eligibility. The path does not read admission state, so disabling new admission cannot strand prior ambiguous work.
 
-Claims require environment, session/run, stable operation/attempt/idempotency identifiers, lowercase SHA-256 request hash, and non-negative integer minor units. The data adapter owns atomic row locks/counters and concurrency enforcement.
+Claims require environment, `admissionId`, `policyId`, session/run, stable operation/attempt/idempotency identifiers, lowercase SHA-256 request hash, and non-negative integer minor units. The controller maps `admissionId` to Dax's `id` and `operationId` to Dax's `operationKey`; the idempotency key remains the synthetic-provider identity. The data adapter owns atomic row locks/counters and concurrency enforcement.
 
 `createSyntheticPaymentProvider({scenario})`
 
@@ -41,29 +47,31 @@ The provider is an in-memory deterministic test adapter, not durable state. Its 
 
 `reduceSyntheticPaymentEvent({current,event})` deduplicates by event ID and rejects stale, ambiguous same-time, and terminal-regression evidence.
 
-`createLocalWebhookComposition({pool,endpointSecret,applyBusinessEvent,...})`
+`createLocalWebhookComposition({pool,endpointSecret,resolveProviderReference,applyBusinessEvent,...})`
 
 The factory requires:
 
 - injected pg-compatible `pool.connect`;
 - a server-held local endpoint signing secret value supplied by the integration owner at composition time;
-- mandatory `applyBusinessEvent(tx,safeEvent)` callback;
-- default or injected event/reference allowlist controls.
+- mandatory transaction-scoped `resolveProviderReference(tx,safeEvent)` authorization callback returning `{authorized:true,sessionId,runId,...}`;
+- mandatory `applyBusinessEvent(tx,safeEvent,authorization)` callback;
+- an event-type allowlist plus fixed syntactic provider-reference and object-type checks.
 
 It explicitly composes `createPostgresPersistence`, `createReliabilityPersistenceAdapter`, `createStripeWebhookReceiptService`, and `createStripeWebhookPost`. Construction does not connect. The first request opens the transaction. Verification operates on untouched bytes with the accepted 300-second tolerance before parse. The receipt is persisted before the allowlisted mutation, both in one transaction, and acknowledgement occurs only after commit.
 
-Unknown event types are durably received and ignored. For supported events, the local verification wrapper also requires the expected allowlisted `data.object.object` type before the receipt service can classify the event for business application; a mismatched object type is converted to an ignored local disposition after signature verification. Unsupported provider-reference shapes are durably received but cannot reach state mutation. The injected business callback must resolve the opaque provider reference to an authorized session/run record inside the supplied transaction before changing state; an opaque provider reference alone is never authorization.
+Unknown event types are durably received and ignored. For supported events, the local verification wrapper also requires the expected allowlisted `data.object.object` type before the receipt service can classify the event for business application; a mismatched object type is converted to an ignored local disposition after signature verification. Unsupported provider-reference shapes are durably received but cannot reach state mutation. A syntactically valid opaque reference is passed to the mandatory resolver inside the receipt transaction; absent, unresolved, or failed authorization rolls back the receipt and returns HTTP 503 so callback-before-response races remain retryable. An opaque provider reference alone is never authorization.
 
 Failure behavior
 
-- Missing pool, secret, callback, or allowlist control: composition throws before serving.
+- Missing pool, secret, resolver, business callback, or event allowlist: composition throws before serving.
 - Missing/stale/invalid signature or live-mode event: fail closed under the accepted receipt service.
 - Receipt persistence error: rollback and HTTP 503; no acknowledgement or state mutation.
+- Unresolved/failed provider-reference authorization: rollback and HTTP 503; no acknowledgement or state mutation, allowing a later retry after the owning attempt commits.
 - Business callback error: receipt and mutation roll back together; HTTP 503.
 - Duplicate verified provider event: acknowledgement reports duplicate and skips business mutation.
 - Safety adapter failure: safe `adapter_failure`; no exception detail and no synthetic call.
 - Kill/budget/conflict: durable refusal result; no synthetic call and no replacement attempt.
-- Unknown existing attempt: preserve attempt and authority holds; schedule one dedupe-keyed `reconcile:<attemptId>` outbox action through `scheduleUnknownOutcomeReconciliation`.
+- Unknown existing attempt: preserve attempt and authority holds; atomically record/verify its durable reconciliation control and schedule one dedupe-keyed `reconcile:<attemptId>` outbox action. Later scheduling requires a matching durable pending control and remains independent of admission state.
 
 Observability
 
