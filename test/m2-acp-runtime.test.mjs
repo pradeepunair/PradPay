@@ -241,6 +241,17 @@ test("validates request fields against the pinned vendored schema", async () => 
   assert.equal(port.calls.length, 0);
 });
 
+test("rejects unsupported cancel fields even though the pinned schema omits additionalProperties", async () => {
+  const { handler, port } = makeHandler();
+  const response = await handler(
+    request("POST", `/checkout_sessions/${checkoutId}/cancel`, { unsupported: true }, { "Idempotency-Key": "idem_cancel_invalid" }),
+    { operation: "cancel", checkoutSessionId: checkoutId },
+  );
+  assert.equal(response.status, 400);
+  await assertSafeError(response, "invalid_request");
+  assert.equal(port.calls.length, 0);
+});
+
 test("requires idempotency on every mutation", async () => {
   const { handler, port } = makeHandler();
   const response = await handler(request("POST", "/checkout_sessions", createBody), { operation: "create" });

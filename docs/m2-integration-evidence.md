@@ -8,9 +8,9 @@ Status: local QA candidate; not Product-accepted or release-ready
 - Engineering interfaces: `docs/m2-engineering-plan.md` and ADR-0009 at `b29aad640a45cad0ad8a15d35b6adebf7a0d90fc`
 - Data package: `876a3ba`
 - Reliability package: `db173e40fc16e6bee60e4ed8199cd1d28ccc1986`, followed by reviewed hardening commit `441bb77784dbcf0a1b1472892e4bcf34fc5b53c1`
-- ACP application package: `e9e18df`
+- ACP application package: `5bc3b2b68fe03661f7a81be7e74562be3668d179` (authoritative final commit, superseding `e9e18df`)
 
-The packages were cherry-picked, in the order above, into the clean local sibling worktree `/Users/pradeepnair/Documents/GitHub/PRADPAY-m2-integrated` on `feat/m2-integrated-candidate`. The unrelated dashboard/UI edits in `/Users/pradeepnair/Documents/GitHub/PRADPAY-impl` were not reset, stashed, overwritten, deleted, or copied into this candidate.
+The packages were integrated, in the order above, into the clean local sibling worktree `/Users/pradeepnair/Documents/GitHub/PRADPAY-m2-integrated` on `feat/m2-integrated-candidate`. Because the authoritative Avery commit amended the previously reviewed `e9e18df`, its exact two-file delta was applied and reviewed after the initial cherry-pick; the candidate therefore contains the complete `5bc3b2b` tree content for Avery-owned paths. The unrelated dashboard/UI edits in `/Users/pradeepnair/Documents/GitHub/PRADPAY-impl` were not reset, stashed, overwritten, deleted, or copied into this candidate.
 
 ## Integration decision
 
