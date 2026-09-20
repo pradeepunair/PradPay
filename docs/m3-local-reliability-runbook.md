@@ -17,15 +17,17 @@ Required transaction ports:
 - `withTransaction(work)`
 - `readSafetyControl(tx, {environment})` -> `{paymentAdmissionEnabled,version,reasonCode}` or null
 - `reserveSyntheticBudget(tx, claim)` -> `{status:"reserved"|"replay"|"conflict"|"kill_switch"|"budget_exhausted",record?}`
+- `markPaymentAttemptUnknown(tx, {sessionId,runId,attemptId,operationId})` marks only the matching `submitted`, `processing`, or already-`unknown` durable attempt unknown and returns `{status:"updated",attempt}`; terminal/mismatched attempts return `{status:"rejected"}`
+- `readUnknownPaymentAttempt(tx, {sessionId,runId,attemptId})` returns only the matching durable unknown attempt
 - `upsertReconciliationControl(tx, control)`; its scoped payment-attempt foreign key verifies the durable attempt before unknown-outcome scheduling
 - `readReconciliationControl(tx, {sessionId,runId,attemptId})`; only a matching durable `pending` control authorizes existing-attempt scheduling
 - reliability-shaped `createOutboxJob(tx, job)` for the existing unknown-attempt reconciliation action
 
 Methods:
 
-- `admitSynthetic(claim)` reads the durable control and reserves budget in one transaction. Missing control, disabled admission, ambiguous/invalid adapter response, or adapter exception fails closed.
-- `executeSynthetic({claim,provider,onCallback?})` invokes `provider.execute` only after `reserved` or `replay`. Kill, budget exhaustion, conflict, and adapter failure produce zero provider invocations. A timeout or callback rejection after an effect becomes the stable unknown outcome, atomically upserts its durable reconciliation control and dedupe-keyed outbox job, preserves the same attempt, and never creates a replacement.
-- `scheduleExistingReconciliation({sessionId,runId,attemptId})` reads and verifies the matching durable pending reconciliation control before scheduling. Caller-supplied status is ignored and cannot fabricate eligibility. The path does not read admission state, so disabling new admission cannot strand prior ambiguous work.
+- `admitSynthetic(claim)` reads the durable control and always calls `reserveSyntheticBudget` in the same transaction after a successful control read. Missing/disabled control therefore records and replays Dax's durable `kill_switch` decision; a changed claim conflicts. A control read failure, reservation failure, unsafe result mismatch, or adapter exception fails closed.
+- `executeSynthetic({claim,provider,onCallback?})` invokes `provider.execute` only after `reserved` or `replay`. Kill, budget exhaustion, conflict, and adapter failure produce zero provider invocations. A timeout or callback rejection after an effect becomes the stable unknown outcome, atomically marks and verifies the scoped durable attempt unknown, upserts its reconciliation control, and creates the dedupe-keyed outbox job; it never creates a replacement.
+- `scheduleExistingReconciliation({sessionId,runId,attemptId})` requires both the matching durable unknown payment attempt and pending reconciliation control before scheduling. Caller-supplied status is ignored and cannot fabricate eligibility; terminal attempts are rejected. The path does not read admission state, so disabling new admission cannot strand prior ambiguous work.
 
 Claims require environment, `admissionId`, `policyId`, session/run, stable operation/attempt/idempotency identifiers, lowercase SHA-256 request hash, and non-negative integer minor units. The controller maps `admissionId` to Dax's `id` and `operationId` to Dax's `operationKey`; the idempotency key remains the synthetic-provider identity. The data adapter owns atomic row locks/counters and concurrency enforcement.
 
@@ -70,7 +72,7 @@ Failure behavior
 - Business callback error: receipt and mutation roll back together; HTTP 503.
 - Duplicate verified provider event: acknowledgement reports duplicate and skips business mutation.
 - Safety adapter failure: safe `adapter_failure`; no exception detail and no synthetic call.
-- Kill/budget/conflict: durable refusal result; no synthetic call and no replacement attempt.
+- Kill/budget/conflict: durable stable refusal result; identical kill-switch claims replay `kill_switch`, changed claims conflict, and no synthetic call or replacement attempt occurs.
 - Unknown existing attempt: preserve attempt and authority holds; atomically record/verify its durable reconciliation control and schedule one dedupe-keyed `reconcile:<attemptId>` outbox action. Later scheduling requires a matching durable pending control and remains independent of admission state.
 
 Observability
@@ -81,7 +83,7 @@ Recovery traces
 
 Ambiguous response after effect:
 
-1. Keep the original operation and attempt `unknown`.
+1. Atomically mark and verify the scoped original payment attempt `unknown` before creating reconciliation control/outbox work.
 2. Do not release authority or create a replacement attempt.
 3. Schedule `reconcile:<attemptId>` once.
 4. Replay the same synthetic identity. The adapter returns/reports the original effect ID and emits the same event ID; reducer/business dedupe prevents a second effect.
