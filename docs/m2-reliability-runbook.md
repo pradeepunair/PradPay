@@ -10,7 +10,18 @@ Composition and default safety
 - The exported `POST` remains fail-closed with HTTP 503 until Emily composes the data-owned persistence adapter. It never acknowledges into memory.
 - Compose `createStripeWebhookReceiptService({persistence, applyBusinessEvent})` with the fixed persistence port. The handler is mandatory; construction fails closed when it is absent. `applyBusinessEvent(tx, safeEvent)` must update business state in the same transaction as `recordWebhookReceipt`.
 - Endpoint signing material remains server-held under the existing `STRIPE_WEBHOOK_SECRET` reference. Never print or persist its value.
-- No module in this package constructs a Stripe client/API resource or invokes a mutation. The Stripe SDK static webhook utility is used only for local signature verification.
+- No module in this package constructs a Stripe API resource or invokes a mutation. The Stripe SDK is used only for local signature verification.
+
+Persistence integration shapes
+
+The services retain the fixed method names from `docs/m2-engineering-plan.md` and require these result envelopes:
+
+- `recordWebhookReceipt(tx, receipt)` -> `{status: "created"|"duplicate", receipt?}`.
+- `claimIdempotency(tx, claim)` -> `{status: "created"|"replay"|"conflict", record?}`. The injected `createOperation(tx, {claim, idempotency})` must persist the stable operation in the same transaction; the injected `readOperation(tx, {claim, idempotency})` must return it on replay. Both callbacks are mandatory so an immutable persistence record does not need in-memory mutation.
+- `createOutboxJob(tx, job)` -> `{status: "created"|"duplicate", job?}`.
+- `leaseOutboxJobs({owner, now, limit, leaseMs})` returns jobs carrying `id`, `type`, `dedupeKey`, `safePayload`, `attempts`, and `leaseToken`.
+- `ackOutboxJob({jobId, owner, leaseToken})` -> `{status: "acked"|"stale_fence"}`.
+- `failOutboxJob({jobId, owner, leaseToken, terminal, nextAttemptAt, errorCode})` -> `{status: "retry_scheduled"|"terminal"|"stale_fence"}`.
 
 Webhook behavior
 

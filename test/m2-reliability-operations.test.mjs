@@ -54,6 +54,21 @@ function createPersistence() {
   };
 }
 
+test("rejects malformed request hashes before claiming idempotency", async () => {
+  const persistence = createPersistence();
+  await assert.rejects(claimOperation({
+    persistence,
+    claim: {
+      sessionId: "session_01",
+      scope: "checkout.complete",
+      key: "operation_01",
+      requestHash: "not-a-sha256",
+    },
+    createOperation: persistence.createOperation,
+  }), /SHA-256 requestHash/);
+  assert.equal(persistence.records.size, 0);
+});
+
 test("same operation key and request hash replays one stable operation", async () => {
   const persistence = createPersistence();
   const claim = {
