@@ -4,7 +4,7 @@ Status: approved for local-only synthetic implementation
 Baseline: f50d896ee5f6dfcca1a0b0020f1d0f8fc34eaea4
 Branch/worktree: feat/m3-local-synthetic at /Users/pradeepnair/Documents/GitHub/PRADPAY-m3-local
 Integration owner: Emily
-Product input: docs/product/paymentlab-ai-m3-readiness.md, M3.0-readiness
+Product input: `/Users/pradeepnair/Documents/GitHub/PRADPAY-m3-local/docs/product/paymentlab-ai-m3-readiness.md`, M3.1-readiness
 
 Authority boundary
 
