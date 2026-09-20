@@ -157,3 +157,42 @@ node --test test/m2-data-*.test.mjs
 
 No hosted resource, provider call, credential, webhook destination, payment, or
 background dispatcher is created by this flow.
+
+## Milestone 3 local safety and scoped repository flow
+
+The M3 persistence adapter adds these transaction-scoped envelopes:
+
+- `readSafetyControl(tx,{environment})` returns
+  `{paymentAdmissionEnabled,version,reasonCode}` and defaults missing controls to
+  disabled.
+- `setSafetyControl(tx,{environment,paymentAdmissionEnabled,expectedVersion,reasonCode})`
+  returns `{status:"updated",record}` or `{status:"conflict"}`.
+- `reserveSyntheticBudget(tx,claim)` returns one of `reserved`, `replay`,
+  `conflict`, `kill_switch`, or `budget_exhausted`; successful/replayed results
+  may include their durable admission record.
+- `upsertReconciliationControl`, `readReconciliationControl`, and
+  `updateReconciliationControl` always require session, run, and attempt scope.
+- `claimAcpIdempotency`, `storeAcpIdempotentResponse`, `createAcpCheckout`,
+  `retrieveAcpCheckout`, `updateAcpCheckout`, and
+  `cancelAcpCheckout` always require both `sessionId` and `runId`. Create returns
+  `created`; reads return `found` or `not_found`; updates/cancel return their
+  mutation status or `not_found`. ACP idempotency returns `created`, `replay`,
+  `conflict`, or a fail-closed pending/forbidden result.
+
+New admission flows as: lock scoped run, resolve stable replay/conflict, read the
+environment kill switch, lock the in-window scoped policy/counter, conditionally
+reserve integer count/amount, and persist the decision in one transaction.
+Reconciliation does not traverse this admission gate. ACP checkout CRUD uses the
+existing M2 checkout record and owner-qualified predicates, while complete and
+delegate-payment remain outside this repository and hard-blocked elsewhere.
+
+Focused evidence runs with:
+
+```text
+node --test test/m3-data-*.test.mjs
+```
+
+The harness applies M2 then M3 migrations inside uniquely named disposable
+databases in the existing local container, repeats M3 apply, inspects schema,
+rehearses M3 down/reapply while preserving M2 tables, and drops every disposable
+database. It uses the container-configured PostgreSQL role without printing it.

@@ -134,3 +134,32 @@ concurrency. Event schema versions remain explicit; existing recording schema
 The down migration is a destructive rehearsal aid for uniquely named disposable
 test databases only. Operational rollback disables callers while retaining this
 additive schema and unresolved records.
+
+## Implemented Milestone 3 local safety controls
+
+Migration `202609190001_m3_local_safety_controls` adds six provider-neutral
+PostgreSQL records without changing M2 data: environment safety controls, scoped
+budget policies, locked budget counters, stable admission decisions, and durable
+reconciliation controls, plus owner-scoped ACP checkout documents. It implements the bounded local contract from
+`M3.1-readiness`; the owner artifact remains outside this specialist branch.
+
+Safety-control rows default payment admission to false and use a monotonic
+optimistic version. A missing row is interpreted as
+`{paymentAdmissionEnabled:false,version:0,reasonCode:"missing_control"}`. Budget
+windows are UTC `timestamptz` ranges. Amount ceilings and consumption are
+integer `bigint` minor units; attempt ceilings and counters are integers.
+
+`reserve_synthetic_budget` locks the owner-qualified run before replay and
+reservation checks, then locks the selected policy/counter. Concurrent claims
+cannot advance count or amount beyond either ceiling. Admission identity is
+unique by both `(session,run,operation)` and `(session,run,attempt)`. An exact
+replay of a reservation returns `replay`; an exact replay of a denied decision
+returns its original `kill_switch` or `budget_exhausted` status so consumers can
+never treat denial as admission. Changed hash, amount, policy, environment, or
+identity returns `conflict`. Denied decisions consume no budget.
+
+Reconciliation controls reference an existing owner-qualified attempt and are
+not gated by the admission control. Turning the kill switch off therefore blocks
+new reservations without making an already-unknown attempt unreadable or
+unresolvable. The down migration is disposable-test-only; operational rollback
+preserves all safety, admission, attempt, receipt, and reconciliation records.
