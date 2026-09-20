@@ -40,6 +40,16 @@ function seedRun(prefix) {
     INSERT INTO runs(id,session_id,mode,scenario,state,reference_time,schema_version)
       VALUES ('${prefix}_r','${prefix}_s','guided_replay','synthetic','running',now(),'1.0.0');`);
 }
+function seedPaymentAttempt(prefix, state) {
+  seedRun(prefix);
+  psql(`INSERT INTO checkouts(id,session_id,run_id,acp_version,state,cart_hash) VALUES ('${prefix}_c','${prefix}_s','${prefix}_r','2026-04-17','ready','cart');
+    INSERT INTO mandates(id,session_id,run_id,checkout_id,version,state,approved_text,constraints,currency,maximum_amount_minor,expires_at)
+      VALUES ('${prefix}_m','${prefix}_s','${prefix}_r','${prefix}_c',1,'reserved','approved','{}','USD',100,now()+interval '1 hour');
+    INSERT INTO orders(id,session_id,run_id,checkout_id,state,currency,amount_minor) VALUES ('${prefix}_o','${prefix}_s','${prefix}_r','${prefix}_c','pending_payment','USD',100);
+    INSERT INTO payments(id,session_id,run_id,checkout_id,order_id,currency,amount_minor) VALUES ('${prefix}_p','${prefix}_s','${prefix}_r','${prefix}_c','${prefix}_o','USD',100);
+    INSERT INTO payment_attempts(id,session_id,run_id,checkout_id,payment_id,mandate_id,operation_key,request_hash,state)
+      VALUES ('${prefix}_at','${prefix}_s','${prefix}_r','${prefix}_c','${prefix}_p','${prefix}_m','${prefix}_op','hash','${state}');`);
+}
 function claimSql({ id, policy, session, run, operation, attempt, hash = "hash", amount = 1 }) {
   return `SELECT reserve_synthetic_budget('${id}','local','${policy}','${session}','${run}','${operation}','${attempt}','${hash}',${amount});`;
 }
@@ -137,6 +147,48 @@ test("kill switch blocks new admission while existing reconciliation remains ope
     UPDATE safety_controls SET payment_admission_enabled=false,version=version+1,reason_code='operator_stop' WHERE environment='local';`);
   assert.equal(JSON.parse(psql(claimSql({ id: "recon_a", policy: "count_policy", session: "recon_s", run: "recon_r", operation: "new_op", attempt: "new_at" }))).status, "kill_switch");
   assert.equal(psql("UPDATE synthetic_reconciliation_controls SET state='resolved',version=version+1,last_result_code='synthetic_final' WHERE session_id='recon_s' AND run_id='recon_r' AND attempt_id='recon_at' RETURNING state;"), "resolved");
+});
+
+test("unknown-attempt state transition is owned, operation-scoped, and fail-closed", () => {
+  for (const [prefix, state] of [["unk_sub","submitted"],["unk_proc","processing"],["unk_replay","unknown"],["unk_pre","prepared"],["unk_done","succeeded"]]) seedPaymentAttempt(prefix, state);
+  const transition = (prefix, operation = `${prefix}_op`, session = `${prefix}_s`) => psql(
+    `UPDATE payment_attempts SET state='unknown',updated_at=now()
+       WHERE session_id='${session}' AND run_id='${prefix}_r' AND id='${prefix}_at' AND operation_key='${operation}'
+         AND state IN ('submitted','processing','unknown') RETURNING state;`,
+  );
+  assert.equal(transition("unk_sub"), "unknown");
+  assert.equal(transition("unk_proc"), "unknown");
+  assert.equal(transition("unk_replay"), "unknown");
+  assert.equal(transition("unk_pre"), "");
+  assert.equal(transition("unk_done"), "");
+  assert.equal(transition("unk_replay", "wrong_operation"), "");
+  assert.equal(transition("unk_replay", "unk_replay_op", "wrong_session"), "");
+  assert.equal(psql("SELECT state FROM payment_attempts WHERE session_id='unk_sub_s' AND run_id='unk_sub_r' AND id='unk_sub_at' AND state='unknown';"), "unknown");
+  assert.equal(psql("SELECT state FROM payment_attempts WHERE session_id='wrong_session' AND run_id='unk_sub_r' AND id='unk_sub_at' AND state='unknown';"), "");
+});
+
+test("ACP cancel serialization prevents a racing update from reviving canceled state", async () => {
+  seedRun("race");
+  psql(`INSERT INTO checkouts(id,session_id,run_id,acp_version,state,cart_hash) VALUES ('race_c','race_s','race_r','2026-04-17','ready','hash');
+    INSERT INTO acp_checkout_documents(checkout_id,subject,session_id,run_id,document)
+      VALUES ('race_c','agent','race_s','race_r','{"id":"race_c","status":"ready_for_payment","currency":"usd","line_items":[],"totals":[],"fulfillment_options":[],"messages":[],"links":[],"capabilities":{"payment":{"handlers":[]}}}');`);
+  const cancel = psqlAsync(`BEGIN;
+    SELECT d.checkout_id FROM acp_checkout_documents d JOIN checkouts c ON c.id=d.checkout_id
+      WHERE d.checkout_id='race_c' AND d.subject='agent' AND d.session_id='race_s' AND d.run_id='race_r' AND c.acp_version='2026-04-17'
+      FOR UPDATE OF d,c;
+    SELECT pg_sleep(0.25);
+    UPDATE acp_checkout_documents SET document=jsonb_set(document,'{status}','"canceled"'),version=version+1 WHERE checkout_id='race_c';
+    UPDATE checkouts SET state='canceled',cart_version=cart_version+1 WHERE id='race_c' AND session_id='race_s' AND run_id='race_r';
+    COMMIT;`);
+  const update = psqlAsync(`BEGIN;
+    SELECT d.checkout_id FROM acp_checkout_documents d JOIN checkouts c ON c.id=d.checkout_id
+      WHERE d.checkout_id='race_c' AND d.subject='agent' AND d.session_id='race_s' AND d.run_id='race_r' AND c.acp_version='2026-04-17'
+      FOR UPDATE OF d,c;
+    UPDATE acp_checkout_documents SET document=jsonb_set(document,'{status}','"incomplete"'),version=version+1
+      WHERE checkout_id='race_c' AND document->>'status' <> 'canceled';
+    COMMIT;`);
+  await Promise.all([cancel, update]);
+  assert.equal(psql("SELECT document->>'status'||'|'||state FROM acp_checkout_documents JOIN checkouts ON id=checkout_id WHERE checkout_id='race_c';"), "canceled|canceled");
 });
 
 test("ACP checkout create/read/update/cancel remains session and run scoped", () => {
