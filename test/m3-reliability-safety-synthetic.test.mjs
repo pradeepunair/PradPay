@@ -2,16 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createLocalSafetyController } from "../lib/safety/local-controller.mjs";
+import { createLocalSafetyPersistence } from "../lib/safety/persistence.mjs";
 import {
   createSyntheticPaymentProvider,
   reduceSyntheticPaymentEvent,
   SyntheticIdempotencyConflictError,
   SyntheticProviderTimeoutError,
 } from "../lib/payments/synthetic-provider.mjs";
-import { scheduleUnknownOutcomeReconciliation } from "../lib/reconciliation/unknown-outcomes.mjs";
 
 const baseClaim = Object.freeze({
   environment: "local",
+  admissionId: "admission_m3",
+  policyId: "policy_m3",
   sessionId: "session_m3",
   runId: "run_m3",
   operationId: "operation_m3",
@@ -21,14 +23,41 @@ const baseClaim = Object.freeze({
   amountMinor: 1250,
 });
 
-function createSafetyPersistence({ enabled = true, reserveStatus = "reserved", failRead = false, failReserve = false } = {}) {
+function createSafetyPersistence({
+  enabled = true,
+  reserveStatus = "reserved",
+  failRead = false,
+  failReserve = false,
+  failOutbox = false,
+} = {}) {
   const reservations = new Map();
   const outbox = new Map();
-  const calls = { read: 0, reserve: 0 };
+  const attempts = new Set([`${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`]);
+  const reconciliation = new Map();
+  const calls = { read: 0, reserve: 0, reconciliationRead: 0 };
   return {
     calls,
     outbox,
-    async withTransaction(work) { return work({ reservations, outbox }); },
+    attempts,
+    reconciliation,
+    async withTransaction(work) {
+      const snapshots = {
+        reservations: new Map(reservations),
+        outbox: new Map(outbox),
+        reconciliation: new Map(reconciliation),
+      };
+      try {
+        return await work({ reservations, outbox, attempts, reconciliation });
+      } catch (error) {
+        reservations.clear();
+        outbox.clear();
+        reconciliation.clear();
+        for (const [key, value] of snapshots.reservations) reservations.set(key, value);
+        for (const [key, value] of snapshots.outbox) outbox.set(key, value);
+        for (const [key, value] of snapshots.reconciliation) reconciliation.set(key, value);
+        throw error;
+      }
+    },
     async readSafetyControl(_tx, { environment }) {
       calls.read += 1;
       if (failRead) throw new Error("sensitive database detail");
@@ -41,7 +70,7 @@ function createSafetyPersistence({ enabled = true, reserveStatus = "reserved", f
       calls.reserve += 1;
       if (failReserve) throw new Error("sensitive reservation detail");
       if (reserveStatus !== "reserved") return { status: reserveStatus };
-      const key = `${claim.environment}:${claim.operationId}:${claim.attemptId}:${claim.idempotencyKey}`;
+      const key = `${claim.environment}:${claim.operationKey}:${claim.attemptId}`;
       const existing = tx.reservations.get(key);
       if (existing) {
         return existing.requestHash === claim.requestHash
@@ -52,7 +81,26 @@ function createSafetyPersistence({ enabled = true, reserveStatus = "reserved", f
       tx.reservations.set(key, record);
       return { status: "reserved", record };
     },
+    async upsertReconciliationControl(tx, control) {
+      const key = `${control.sessionId}:${control.runId}:${control.attemptId}`;
+      if (!tx.attempts.has(key)) throw new Error("durable attempt foreign key rejected");
+      const existing = tx.reconciliation.get(key);
+      const record = existing ?? Object.freeze({
+        id: control.id,
+        session_id: control.sessionId,
+        run_id: control.runId,
+        attempt_id: control.attemptId,
+        state: "pending",
+      });
+      tx.reconciliation.set(key, record);
+      return record;
+    },
+    async readReconciliationControl(tx, scope) {
+      calls.reconciliationRead += 1;
+      return tx.reconciliation.get(`${scope.sessionId}:${scope.runId}:${scope.attemptId}`) ?? null;
+    },
     async createOutboxJob(tx, job) {
+      if (failOutbox) throw new Error("synthetic outbox write failure");
       if (tx.outbox.has(job.dedupeKey)) return { status: "duplicate", job: tx.outbox.get(job.dedupeKey) };
       tx.outbox.set(job.dedupeKey, job);
       return { status: "created", job };
@@ -69,6 +117,50 @@ function identity(overrides = {}) {
     ...overrides,
   };
 }
+
+test("safety persistence facade composes Dax data ports with reliability outbox shape", async () => {
+  const tx = Object.freeze({ name: "transaction" });
+  let reservedClaim;
+  let outboxJob;
+  const dataPersistence = {
+    async withTransaction(work) { return work(tx); },
+    async readSafetyControl(receivedTx) {
+      assert.equal(receivedTx, tx);
+      return { paymentAdmissionEnabled: true, version: 1, reasonCode: "local_test" };
+    },
+    async reserveSyntheticBudget(receivedTx, claim) {
+      assert.equal(receivedTx, tx);
+      reservedClaim = claim;
+      return { status: "reserved", record: { id: claim.id } };
+    },
+    async upsertReconciliationControl() {},
+    async readReconciliationControl() {},
+  };
+  const outboxPersistence = {
+    async createOutboxJob(receivedTx, job) {
+      assert.equal(receivedTx, tx);
+      outboxJob = job;
+      return { status: "created", job };
+    },
+  };
+  const persistence = createLocalSafetyPersistence({ dataPersistence, outboxPersistence });
+  const controller = createLocalSafetyController({ persistence });
+  const admission = await controller.admitSynthetic(baseClaim);
+  assert.equal(admission.status, "reserved");
+  assert.deepEqual(reservedClaim, {
+    id: baseClaim.admissionId,
+    environment: baseClaim.environment,
+    policyId: baseClaim.policyId,
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    operationKey: baseClaim.operationId,
+    attemptId: baseClaim.attemptId,
+    requestHash: baseClaim.requestHash,
+    amountMinor: baseClaim.amountMinor,
+  });
+  await persistence.createOutboxJob(tx, { type: "payment.reconcile_unknown", dedupeKey: "reconcile:attempt_m3" });
+  assert.deepEqual(outboxJob, { type: "payment.reconcile_unknown", dedupeKey: "reconcile:attempt_m3" });
+});
 
 for (const [scenario, expectedStatus] of [
   ["succeeded", "succeeded"],
@@ -240,12 +332,13 @@ test("reserved and replayed admission use the same provider operation", async ()
   assert.deepEqual(provider.inspect(), { calls: 2, effects: 1, operations: 1 });
 });
 
-test("timeout after effect automatically preserves and schedules the existing attempt once", async () => {
+test("post-effect callback failure becomes stable unknown and schedules one reconciliation", async () => {
   const persistence = createSafetyPersistence();
   const provider = createSyntheticPaymentProvider({ scenario: "timeout_after_effect" });
   const controller = createLocalSafetyController({ persistence });
-  const first = await controller.executeSynthetic({ claim: baseClaim, provider });
-  const replay = await controller.executeSynthetic({ claim: baseClaim, provider });
+  const rejectCallback = async () => { throw new Error("synthetic callback consumer failure"); };
+  const first = await controller.executeSynthetic({ claim: baseClaim, provider, onCallback: rejectCallback });
+  const replay = await controller.executeSynthetic({ claim: baseClaim, provider, onCallback: rejectCallback });
   assert.equal(first.status, "unknown");
   assert.equal(first.effectRecorded, true);
   assert.equal(first.operation.status, "unknown");
@@ -253,30 +346,59 @@ test("timeout after effect automatically preserves and schedules the existing at
   assert.equal(first.reconciliation.status, "created");
   assert.equal(replay.reconciliation.status, "duplicate");
   assert.equal(first.createReplacementAttempt, false);
+  assert.equal(persistence.reconciliation.size, 1);
   assert.equal(persistence.outbox.size, 1);
   assert.deepEqual(provider.inspect(), { calls: 2, effects: 1, operations: 1 });
 });
 
-test("existing unknown attempt reconciliation remains allowed while admission is disabled", async () => {
+test("outbox failure rolls back unknown-control creation atomically", async () => {
+  const persistence = createSafetyPersistence({ failOutbox: true });
+  const provider = createSyntheticPaymentProvider({ scenario: "timeout_after_effect" });
+  const controller = createLocalSafetyController({ persistence });
+  await assert.rejects(
+    controller.executeSynthetic({ claim: baseClaim, provider }),
+    /outbox write failure/,
+  );
+  assert.equal(persistence.reconciliation.size, 0);
+  assert.equal(persistence.outbox.size, 0);
+  assert.deepEqual(provider.inspect(), { calls: 1, effects: 1, operations: 1 });
+});
+
+test("existing reconciliation is durably verified and remains schedulable while admission is disabled", async () => {
   const persistence = createSafetyPersistence({ enabled: false });
   const controller = createLocalSafetyController({ persistence });
-  const operation = {
-    operationId: "operation_unknown",
-    attemptId: "attempt_unknown",
-    sessionId: "session_m3",
-    runId: "run_m3",
-    status: "unknown",
-  };
-  const permitted = controller.permitExistingReconciliation(operation);
-  assert.deepEqual(permitted, {
-    allowed: true,
-    attemptId: "attempt_unknown",
-    createReplacementAttempt: false,
+  await persistence.withTransaction((tx) => persistence.upsertReconciliationControl(tx, {
+    id: "reconciliation_attempt_m3",
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
+  }));
+  const first = await controller.scheduleExistingReconciliation({
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
   });
-  const first = await scheduleUnknownOutcomeReconciliation({ persistence, operation });
-  const duplicate = await scheduleUnknownOutcomeReconciliation({ persistence, operation });
+  const duplicate = await controller.scheduleExistingReconciliation({
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
+  });
   assert.equal(first.status, "created");
   assert.equal(duplicate.status, "duplicate");
   assert.equal(persistence.outbox.size, 1);
+  assert.equal(persistence.calls.read, 0);
+  assert.equal(persistence.calls.reconciliationRead, 2);
+});
+
+test("caller-supplied unknown status cannot fabricate reconciliation", async () => {
+  const persistence = createSafetyPersistence({ enabled: false });
+  const controller = createLocalSafetyController({ persistence });
+  await assert.rejects(controller.scheduleExistingReconciliation({
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: "fabricated_attempt",
+    status: "unknown",
+  }), /durable unknown attempt/i);
+  assert.equal(persistence.outbox.size, 0);
   assert.equal(persistence.calls.read, 0);
 });
