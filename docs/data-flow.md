@@ -15,8 +15,8 @@ sequenceDiagram
     participant MA as Merchant services/agent
     participant G as Consent/payment gate
     participant DB as Postgres/outbox
-    participant S as Stripe test API
-    participant WH as Webhook intake
+    participant S as Stripe test API (target; blocked)
+    participant WH as Webhook intake (local composition only)
 
     V->>UI: Scenario and mission
     UI->>API: Create idempotent run
@@ -33,14 +33,21 @@ sequenceDiagram
     API->>DB: Persist exact approved constraints
     WF->>G: Atomically validate and reserve authority
     G->>DB: Pre-create order/payment/attempt + dispatch record
-    G->>S: Submit once with deterministic idempotency key
+    G->>S: Submit once with deterministic idempotency key (not yet authorized)
     S-->>G: Response, action required, or lost response
     G->>DB: Persist response or unknown state
-    S->>WH: Signed test webhook
+    S->>WH: Signed test webhook (external proof absent)
     WH->>DB: Verify, deduplicate, persist receipt
     WF->>DB: Apply/reconcile without state regression
     DB-->>UI: Snapshot + subsequent safe events
 ```
+
+For M3.1, the exact local candidate verifies the durable pre-dispatch, synthetic
+effect, generated-signature webhook, unknown-outcome, and reconciliation flows.
+The provider arrows above remain target behavior. They have not been exercised
+with Stripe credentials, a registered destination, a hosted database/runner, or
+a deployed candidate. E03-E08 therefore remain blocked/partial and no X-gate is
+externally accepted.
 
 The database commit is the synchronization point. Browser displays, model text,
 and success redirects are not payment evidence. Every mutating provider operation

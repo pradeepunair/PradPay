@@ -5,6 +5,12 @@ Status: pinned runtime checkout subset composed locally with durable repository 
 This record describes only the local M2/M3 application boundary. It does not claim
 provider, account, payment-handler, staging, or end-to-end payment compatibility.
 
+M3.1 calibration: candidate
+`b9a480c353a7123c4680aec3ed5b442c8ceaa821` passed bounded local synthetic QA,
+but ADR-0003 remains proposed/blocked and E03-E08 are not satisfied. This record
+therefore advertises no payment handler and makes no external X-gate acceptance
+claim. Complete checkout and delegate payment remain hard-blocked.
+
 ## Pinned artifact
 
 | Field | Verified value | Evidence |

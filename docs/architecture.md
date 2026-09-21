@@ -15,11 +15,24 @@ flowchart LR
     Ops --> Web
 ```
 
-The portfolio links to PaymentLab but is not part of its runtime. The exact
-repository, Vercel project, database, workflow provider, model provider, domain,
-and Stripe capability are verified in Phase 0 and captured in ADRs.
+The portfolio links to PaymentLab but is not part of its runtime. Phase 0 records
+dated observations and proposals for the repository, Vercel project, database,
+workflow provider, model provider, domain, and Stripe capability. Those records
+must not be treated as current candidate evidence without fresh, authorized
+verification and the applicable accepted ADRs.
 
 ## Proposed component architecture
+
+### M3.1 evidence calibration
+
+The diagrams below describe target topology, not a deployed candidate. Exact
+candidate `b9a480c353a7123c4680aec3ed5b442c8ceaa821` verifies only the local
+synthetic application, PostgreSQL, outbox, safety, webhook-composition, and
+reconciliation boundaries. It does not establish a Stripe-capable account,
+registered callback, hosted PostgreSQL, hosted runner, candidate-mapped staging
+deployment, or accepted payment handler. Historical Vercel/Stripe observations in
+the Phase 0 inventory are context only and must be freshly verified under an
+approved external package before use as M3 evidence.
 
 ```mermaid
 flowchart TB

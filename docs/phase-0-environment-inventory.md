@@ -3,6 +3,16 @@
 Verified: 2026-09-08. This file records identifiers and capabilities needed for
 architecture decisions, never credentials or secret values.
 
+## Evidence-age and M3.1 use
+
+All account, dashboard, URL, project, activity, and availability statements below
+are historical observations from 2026-09-08/09 unless a row says otherwise. They
+were not freshly account-read for candidate
+`b9a480c353a7123c4680aec3ed5b442c8ceaa821` and are not proof of current access,
+ownership, configuration, deployment provenance, Stripe capability, callback
+registration, hosted durability, or M3 acceptance. Fresh verification requires a
+separately approved external package. No credential value belongs in this file.
+
 ## Implementation repository
 
 | Fact | Verified value | Method |

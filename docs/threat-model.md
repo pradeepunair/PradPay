@@ -69,6 +69,14 @@ flowchart LR
 
 ## Residual risks requiring Phase 0 decisions
 
+M3.1 local QA does not retire external provider or hosting risks. Credential
+rotation/custody, account entitlement, callback authenticity at a registered
+destination, hosted database/runner behavior, deployment provenance, budget
+defaults, and real uncertain-response recovery remain unverified. E09 is verified
+only for local fail-closed controls. Until separately approved evidence exists,
+complete/delegate-payment stays hard-blocked, handlers stay empty, and all Stripe,
+webhook-registration, hosted-resource, deployment, and payment actions are denied.
+
 - Stripe SPT availability is private-preview/account-dependent.
 - Browser/dashboard accessibility output can reveal test credentials even without
   an explicit reveal action; inspected credentials must be rotated and credential

@@ -1,17 +1,24 @@
 # Phase 3 — Stripe test sale and resilient recovery
 
-- Status: not started
+- Status: local synthetic foundation QA-passed; external entry gates blocked and Phase 3 unaccepted
 - Owner: Pradeep Nair
 - Start date: pending Phase 2 gate and Stripe capability approval
-- Gate review date: pending
+- Gate review date: 2026-09-21 (`M3-GATE-DOC-001`)
 - PRD milestone: Milestone 3
-- Applicable acceptance checks: A04, A07-A17, A19-A24, A26-A28
+- Applicable acceptance checks: A04, A07-A18, A20-A24, A26-A28
 
 ## Outcome
 
 One explicitly authorized mandate produces at most one Stripe test-mode sale and
 one confirmed order. Refusal, duplicate, crash, callback-ordering, and ambiguous
 response paths remain safe and visibly evidence-grounded.
+
+The exact local baseline
+`b9a480c353a7123c4680aec3ed5b442c8ceaa821` passed Tab's bounded synthetic QA.
+This is implementation foundation evidence only: E03-E08 remain blocked or
+partial, E09 is local-only, and every X-gate remains externally unaccepted. No
+Stripe call, provider-signed callback, hosted runtime, deployment, payment, or
+Product acceptance is claimed. ADR-0003 remains proposed and blocked.
 
 ## Entry conditions
 
@@ -92,7 +99,7 @@ response paths remain safe and visibly evidence-grounded.
 - [ ] Callback and provider lookup are the only confirmation evidence sources.
 - [ ] Unknown outcomes reconcile without a new attempt.
 - [ ] Crash, duplicate, ordering, and signature tests pass.
-- [ ] Applicable A01-A28 rows link repeatable, redacted evidence.
+- [ ] Applicable A04, A07-A18, A20-A24, and A26-A28 rows link repeatable, redacted evidence.
 - [ ] Runbook, diagrams, contracts, threat model, and compatibility label are current.
 - [ ] Markdown and generated HTML phase records match.
 
