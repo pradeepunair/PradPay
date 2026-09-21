@@ -90,7 +90,9 @@ Before the credentialed call, the evidence packet must contain:
 
 ## Evidence placeholders
 
-Use `docs/m3-external-evidence-template.md`. Store only redacted references,
+Use `docs/m3-external-evidence-template.md`. The preparation-only approval request
+is `docs/m3-stripe-capability-spike-approval-packet.md`; its incomplete fields do
+not authorize credential access or execution. Store only redacted references,
 timestamps, approved identifiers, mode/version assertions, response class, and
 reviewer disposition. Never store credentials, complete provider payloads,
 reusable tokens, client secrets, webhook signing secrets, or customer data.
