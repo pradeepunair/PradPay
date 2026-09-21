@@ -17,6 +17,7 @@ Required transaction ports:
 - `withTransaction(work)`
 - `readSafetyControl(tx, {environment})` -> `{paymentAdmissionEnabled,version,reasonCode}` or null
 - `reserveSyntheticBudget(tx, claim)` -> `{status:"reserved"|"replay"|"conflict"|"kill_switch"|"budget_exhausted",record?}`
+- `claimSyntheticPaymentAttempt(tx, {sessionId,runId,attemptId,operationId,requestHash})` -> `{status:"ready",attempt}` or `{status:"rejected"}`. The exact required response is `{status:"ready",attempt}` with `attempt.state==="submitted"` and matching `operationId`/`requestHash`. If anything else is returned the transaction aborts and admission yields `adapter_failure`. Kill-switch and conflict reservations skip the claim entirely.
 - `markPaymentAttemptUnknown(tx, {sessionId,runId,attemptId,operationId})` marks only the matching `submitted`, `processing`, or already-`unknown` durable attempt unknown and returns `{status:"updated",attempt}`; terminal/mismatched attempts return `{status:"rejected"}`
 - `readUnknownPaymentAttempt(tx, {sessionId,runId,attemptId})` returns only the matching durable unknown attempt
 - `upsertReconciliationControl(tx, control)`; its scoped payment-attempt foreign key verifies the durable attempt before unknown-outcome scheduling
@@ -25,7 +26,7 @@ Required transaction ports:
 
 Methods:
 
-- `admitSynthetic(claim)` reads the durable control and always calls `reserveSyntheticBudget` in the same transaction after a successful control read. Missing/disabled control therefore records and replays Dax's durable `kill_switch` decision; a changed claim conflicts. A control read failure, reservation failure, unsafe result mismatch, or adapter exception fails closed.
+- `admitSynthetic(claim)` reads the durable control and always calls `reserveSyntheticBudget` in the same transaction after a successful control read. Missing/disabled control therefore records and replays Dax's durable `kill_switch` decision; a changed claim conflicts. If reserve returns `reserved` or `replay` the controller then calls `claimSyntheticPaymentAttempt` inside the same transaction. The exact required result is `{status:"ready",attempt}` with `attempt.state==="submitted"` and matching operation ID and request hash. A rejected claim aborts the transaction; admission yields `adapter_failure` (retryable). A control read failure, reservation failure, claim failure, or adapter exception fails closed.
 - `executeSynthetic({claim,provider,onCallback?})` invokes `provider.execute` only after `reserved` or `replay`. Kill, budget exhaustion, conflict, and adapter failure produce zero provider invocations. A timeout or callback rejection after an effect becomes the stable unknown outcome, atomically marks and verifies the scoped durable attempt unknown, upserts its reconciliation control, and creates the dedupe-keyed outbox job; it never creates a replacement.
 - `scheduleExistingReconciliation({sessionId,runId,attemptId})` requires both the matching durable unknown payment attempt and pending reconciliation control before scheduling. Caller-supplied status is ignored and cannot fabricate eligibility; terminal attempts are rejected. The path does not read admission state, so disabling new admission cannot strand prior ambiguous work.
 
@@ -68,7 +69,7 @@ Failure behavior
 - Missing pool, secret, resolver, business callback, or event allowlist: composition throws before serving.
 - Missing/stale/invalid signature or live-mode event: fail closed under the accepted receipt service.
 - Receipt persistence error: rollback and HTTP 503; no acknowledgement or state mutation.
-- Unresolved/failed provider-reference authorization: rollback and HTTP 503; no acknowledgement or state mutation, allowing a later retry after the owning attempt commits.
+- Unresolved/failed provider-reference authorization: rollback *** HTTP 503; no acknowledgement or state mutation, allowing a later retry after the owning attempt commits.
 - Business callback error: receipt and mutation roll back together; HTTP 503.
 - Duplicate verified provider event: acknowledgement reports duplicate and skips business mutation.
 - Safety adapter failure: safe `adapter_failure`; no exception detail and no synthetic call.
@@ -94,6 +95,22 @@ Kill switch during recovery:
 2. Existing unknown attempts remain eligible for reconciliation.
 3. Verified receipts continue through local webhook composition.
 4. Preserve receipts, attempts, events, reconciliation state, and outbox jobs.
+
+Synthetic admission attempt claim
+
+When reserveSyntheticBudget returns `reserved` or `replay`, the controller immediately calls `dataPersistence.claimSyntheticPaymentAttempt(tx, {sessionId,runId,attemptId,operationId,requestHash})` inside the same transaction. The exact required response is `{status:'ready',attempt}` with `attempt.state === 'submitted'` and matching operationId/requestHash. If the result is anything other than `status:'ready'`, or the returned attempt has a non-submitted state or mismatched identifiers, the transaction aborts and admission yields `adapter_failure` (retryable). This prevents a fresh reservation from being committed against an attempt that is terminal, already-unknown, or fabricated. Kill-switch and conflict reservations skip the claim entirely.
+
+Reconciliation continuity after claim
+
+A previously-admitted attempt replayed against a new claim sees the attempt in its last durable state. The claim step will see a non-submitted state or a mismatched identifier and reject, rolling back the reservation. The replay then falls back to the existing reconciliation path (if the attempt is unknown with a pending control) without creating a second provider call.
+
+No-provider-call guarantee
+
+The provider is invoked only after admitSynthetic returns `{admitted:true}` and the controller calls `provider.execute()`. The claim-synthesis step itself makes zero synthetic-provider calls. Any claim rejection rolls back the reservation without provider invocation.
+
+Unknown replay no resubmission
+
+When a previously-admitted attempt is replayed (e.g. a pending reconciliation control exists for that scope), the admission controller re-enters reserveSyntheticBudget. If the budget is still available, the claim step will see the attempt in its last durable state and reject, rolling back the reservation. The replay then falls back to the existing reconciliation path without creating a second provider call or second outbox job.
 
 Rollback and disable
 
