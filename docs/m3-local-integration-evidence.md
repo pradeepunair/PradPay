@@ -16,9 +16,13 @@ Source packages and integrated commits
 - Reliability source: `0f3caa4fcfb4b7cb8ae62fded0497297d53e3fdf` -> integrated `fd29a94`.
 - Reliability correction: `8b2f7116fb16bc4956d31cda9693657960f43f28` -> integrated `27380a5`.
 - Reliability durable-attempt/refusal correction: `a5ebdae10da7db515cacd4a3accf9e32f79fcbd3` -> integrated `9637002`.
+- Data attempt-claim fence: `3f15a9b66cc593946e4e4a485a4a87dae56239ca` -> integrated `e6e6789`.
+- Reliability attempt-gate tests: `6243d8953f3e54f7175f0fb31e3dad7b74d3039e` -> integrated `2de6f17`.
+- Reliability attempt-gate implementation: `1f40c0325343c10bba1601d93480d97e4af8d10d` -> integrated `020bdfc`.
 - Application source: `a659cb83e88a9f4ba8bee7f0292681cca3ad34cc` -> integrated `150f535`.
 - Integration contracts/schema projection fix: `c2f47a81cad0fad7d34e21069819cc3bb7668df9`.
 - Corrected integration contract tests: `4fbaf0b4f91d79c8298ccfd6a83f9973ba75255e`.
+- Dax/Riley attempt-row adapter normalization: `d2b19b20677d29850279ff0c9653f0d94cded0f4`.
 
 Integration decisions
 
@@ -37,6 +41,7 @@ Defects found and corrected during integration
 2. Reliability review found caller-asserted unknown status, kill-switch reconciliation discontinuity, and permissive opaque-reference authorization. Corrections `8b2f711` and `a5ebdae` require a transaction-scoped resolver, an owned durable `unknown` attempt plus pending control, and allow verified reconciliation while admission is disabled.
 3. Cross-package ACP execution found that raw create-request items were not response `LineItem` records. The temporary empty projection in `c2f47a8` prevented invalid responses; data correction `c7f6f80` then added the pinned-schema-valid durable projection without discarding the cart.
 4. Final review found kill-switch refusals bypassed durable admission decisions, reconciliation controls did not prove attempt state, and ACP cancel could be revived. Corrections `c7f6f80` and `a5ebdae` add durable denial replay/conflict, owner/operation-scoped unknown transitions, dual attempt/control verification, row locking, and monotonic cancellation.
+5. Exact producer/consumer testing found Dax returned a snake_case PostgreSQL attempt row while Riley validated a camelCase attempt contract, causing fail-closed `adapter_failure` instead of admitted synthetic execution. Correction `d2b19b2` strictly validates the owner/attempt/operation/hash/submitted-state row and normalizes it at the reliability facade; malformed, wrapped, or mismatched envelopes remain rejected before any provider call.
 
 PostgreSQL evidence
 
@@ -46,7 +51,7 @@ Focused command:
 
 `node --test test/m3-data-*.test.mjs test/m3-reliability-*.test.mjs test/m3-acp-composition.test.mjs test/m3-integration-contracts.test.mjs`
 
-Result after all specialist corrections: 70 passed, 0 failed, 0 skipped.
+Result after all corrections: 80 passed, 0 failed, 0 skipped.
 
 This includes:
 
@@ -57,6 +62,7 @@ This includes:
 - Stable reserved/denied replay and changed-input conflict.
 - Admission-disabled reconciliation continuity.
 - Durable unknown-attempt transition and terminal/fabricated-attempt rejection.
+- Atomic prepared-to-submitted attempt claim before provider invocation, including exact Dax-row normalization and malformed-envelope rejection.
 - Durable kill-switch refusal replay and changed-request conflict with zero provider calls.
 - Scoped ACP data operations.
 - Concurrent update/cancel serialization with terminal canceled state.
@@ -67,13 +73,14 @@ This includes:
 - Real cross-package adapters for safety/reconciliation/outbox and ACP CRUD/idempotency envelopes.
 - Complete/delegate hard blocks and empty handler advertisement.
 
-Full verification before evidence commit
+Exact-candidate verification
 
-- `npm test`: 176 passed, 0 failed, 0 skipped.
+- `npm test`: 186 passed, 0 failed, 0 skipped.
 - `./node_modules/.bin/tsc --noEmit`: exit 0, no diagnostics.
 - `npm run docs:phases:check`: passed; seven generated pages plus index current; six Markdown/HTML phase pairs, template, navigation, structure, and links validated.
 - `npm run build`: passed; Next.js 16.3.4 compiled, typechecked, and generated 4/4 static pages.
 - `git diff --check`: exit 0.
+- Independent review of `d2b19b20677d29850279ff0c9653f0d94cded0f4`: PASS with no actionable findings.
 
 Dependency decision
 
