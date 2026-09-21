@@ -83,6 +83,27 @@ test("ACP idempotency and repository methods match the application contract", as
   await assert.rejects(persistence.retrieveAcpCheckout(pool.client, { checkoutSessionId: document.id, subject: base.subject, sessionId: base.sessionId, apiVersion: base.apiVersion }), /runId/);
 });
 
+test("synthetic attempt claim atomically fences exact prepared and submitted attempts", async () => {
+  const submitted = {
+    id: "attempt_1", session_id: "session_1", run_id: "run_1",
+    operation_key: "operation_1", request_hash: "hash_1", state: "submitted",
+  };
+  let accepted = true;
+  const pool = fakePool(async (text) => {
+    if (text.startsWith("WITH candidate AS MATERIALIZED")) return { rows: accepted ? [submitted] : [] };
+    return { rows: [] };
+  });
+  const persistence = createPostgresPersistence(pool);
+  const claim = { sessionId: "session_1", runId: "run_1", attemptId: "attempt_1", operationId: "operation_1", requestHash: "hash_1" };
+  assert.deepEqual(await persistence.claimSyntheticPaymentAttempt(pool.client, claim), { status: "ready", attempt: submitted });
+  assert.match(pool.calls[0].text, /FOR UPDATE/);
+  assert.match(pool.calls[0].text, /c\.state='prepared'/);
+  assert.match(pool.calls[0].text, /state='submitted'/);
+  assert.deepEqual(pool.calls[0].values, ["session_1", "run_1", "attempt_1", "operation_1", "hash_1"]);
+  accepted = false;
+  assert.deepEqual(await persistence.claimSyntheticPaymentAttempt(pool.client, claim), { status: "rejected" });
+});
+
 test("unknown-attempt methods enforce owned state and operation scope", async () => {
   const unknown = { id: "attempt_1", session_id: "session_1", run_id: "run_1", state: "unknown" };
   let accepted = true;
