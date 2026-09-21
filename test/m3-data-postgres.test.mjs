@@ -50,6 +50,21 @@ function seedPaymentAttempt(prefix, state) {
     INSERT INTO payment_attempts(id,session_id,run_id,checkout_id,payment_id,mandate_id,operation_key,request_hash,state)
       VALUES ('${prefix}_at','${prefix}_s','${prefix}_r','${prefix}_c','${prefix}_p','${prefix}_m','${prefix}_op','hash','${state}');`);
 }
+function claimAttemptSql(prefix, { session = `${prefix}_s`, run = `${prefix}_r`, attempt = `${prefix}_at`, operation = `${prefix}_op`, hash = "hash" } = {}) {
+  return `WITH candidate AS MATERIALIZED (
+      SELECT * FROM payment_attempts
+       WHERE session_id='${session}' AND run_id='${run}' AND id='${attempt}' AND operation_key='${operation}' AND request_hash='${hash}'
+       FOR UPDATE
+    ), transitioned AS (
+      UPDATE payment_attempts p SET state='submitted',updated_at=now()
+       FROM candidate c WHERE p.id=c.id AND c.state='prepared'
+       RETURNING p.*
+    )
+    SELECT state FROM transitioned
+    UNION ALL
+    SELECT state FROM candidate WHERE state='submitted' AND NOT EXISTS (SELECT 1 FROM transitioned)
+    LIMIT 1;`;
+}
 function claimSql({ id, policy, session, run, operation, attempt, hash = "hash", amount = 1 }) {
   return `SELECT reserve_synthetic_budget('${id}','local','${policy}','${session}','${run}','${operation}','${attempt}','${hash}',${amount});`;
 }
