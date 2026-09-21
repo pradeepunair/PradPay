@@ -604,12 +604,48 @@ test("caller-supplied unknown status cannot fabricate reconciliation", async () 
 
 test("controller rolls back when attempt claim is rejected after reserve reserved", async () => {
   const persistence = createSafetyPersistence();
-  persistence.claimSyntheticPaymentAttempt = async () => ({ status: "rejected" });
+  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => {
+    persistence.calls.attemptClaim += 1;
+    throw new Error("claim rejected; admission is not eligible.");
+  };
+  await assert.rejects(
+    persistence.withTransaction(async (tx_) => {
+      const reservation = await persistence.reserveSyntheticBudget(tx_, {
+        id: baseClaim.admissionId,
+        environment: baseClaim.environment,
+        policyId: baseClaim.policyId,
+        sessionId: baseClaim.sessionId,
+        runId: baseClaim.runId,
+        operationKey: baseClaim.operationId,
+        attemptId: baseClaim.attemptId,
+        requestHash: baseClaim.requestHash,
+        amountMinor: baseClaim.amountMinor,
+      });
+      assert.equal(reservation.status, "reserved");
+      const scope = {
+        sessionId: baseClaim.sessionId,
+        runId: baseClaim.runId,
+        attemptId: baseClaim.attemptId,
+        operationId: baseClaim.operationId,
+        requestHash: baseClaim.requestHash,
+      };
+      await persistence.claimSyntheticPaymentAttempt(tx_, scope);
+      // unreachable — claim throws
+      return tx_;
+    }),
+    /claim rejected/
+  );
+  // withTransaction restored snapshots: attempts preserved, reservations cleared
+  assert.equal(persistence.attempts.size, 1);
+  assert.ok(persistence.reservations.size === 0);
+
   const controller = createLocalSafetyController({ persistence });
   const admission = await controller.admitSynthetic(baseClaim);
   assert.equal(admission.status, "adapter_failure");
   assert.equal(admission.admitted, false);
   assert.ok(admission.retryable);
+  assert.equal(persistence.calls.reserve, 2);
+  assert.equal(persistence.calls.attemptClaim, 2); // once in withTransaction, once in admitSynthetic
 });
 
 test("controller does not claim for kill_switch", async () => {
@@ -629,38 +665,62 @@ test("controller does not claim for kill_switch", async () => {
 
 test("controller rejects terminal attempt before provider invocation", async () => {
   const persistence = createSafetyPersistence();
-  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => ({
-    status: "ready",
-    attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "processing" },
-  });
+  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => {
+    persistence.calls.attemptClaim += 1;
+    return {
+      status: "ready",
+      attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "processing" },
+    };
+  };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
   const controller = createLocalSafetyController({ persistence });
   const admission = await controller.admitSynthetic(baseClaim);
   assert.equal(admission.status, "adapter_failure");
   assert.equal(admission.admitted, false);
+  assert.ok(admission.retryable);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 1);
 });
 
-test("controller rejects already-unknown attempt", async () => {
+test("controller rejects already-unknown attempt before provider invocation", async () => {
   const persistence = createSafetyPersistence();
-  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => ({
-    status: "ready",
-    attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "unknown" },
-  });
+  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => {
+    persistence.calls.attemptClaim += 1;
+    return {
+      status: "ready",
+      attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "unknown" },
+    };
+  };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
   const controller = createLocalSafetyController({ persistence });
   const admission = await controller.admitSynthetic(baseClaim);
   assert.equal(admission.status, "adapter_failure");
   assert.equal(admission.admitted, false);
+  assert.ok(admission.retryable);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 1);
 });
 
-test("controller rejects fabricated attempt state", async () => {
+test("controller rejects fabricated attempt state before provider invocation", async () => {
   const persistence = createSafetyPersistence();
-  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => ({
-    status: "ready",
-    attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "failed" },
-  });
+  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => {
+    persistence.calls.attemptClaim += 1;
+    return {
+      status: "ready",
+      attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "failed" },
+    };
+  };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
   const controller = createLocalSafetyController({ persistence });
   const admission = await controller.admitSynthetic(baseClaim);
   assert.equal(admission.status, "adapter_failure");
   assert.equal(admission.admitted, false);
+  assert.ok(admission.retryable);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 1);
 });
 
 test("controller rejects operation-id mismatch on claim", async () => {
@@ -677,17 +737,26 @@ test("controller rejects operation-id mismatch on claim", async () => {
 test("controller rejects request-hash mismatch on claim", async () => {
   const persistence = createSafetyPersistence();
   persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => {
+    persistence.calls.attemptClaim += 1;
     return { status: "ready", attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: "b".repeat(64), state: "submitted" } };
   };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
   const controller = createLocalSafetyController({ persistence });
   const admission = await controller.admitSynthetic(baseClaim);
   assert.equal(admission.status, "adapter_failure");
   assert.equal(admission.admitted, false);
+  assert.ok(admission.retryable);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 1);
 });
 
 test("fresh reservation rolls back when attempt claim is rejected", async () => {
   const persistence = createSafetyPersistence();
-  persistence.claimSyntheticPaymentAttempt = async (_tx) => ({ status: "rejected" });
+  persistence.claimSyntheticPaymentAttempt = async () => {
+    persistence.calls.attemptClaim += 1;
+    return { status: "rejected" };
+  };
   const controller = createLocalSafetyController({ persistence });
   const result = await controller.admitSynthetic(baseClaim);
   assert.equal(result.admitted, false);
@@ -706,10 +775,13 @@ test("unknown replay does not resubmit provider", async () => {
   });
   assert.equal(persistence.attempts.get(`${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`).state, "unknown");
 
-  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => ({
-    status: "ready",
-    attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "unknown" },
-  });
+  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => {
+    persistence.calls.attemptClaim += 1;
+    return {
+      status: "ready",
+      attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "unknown" },
+    };
+  };
 
   const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
   const controller = createLocalSafetyController({ persistence });
@@ -717,4 +789,103 @@ test("unknown replay does not resubmit provider", async () => {
   assert.equal(result.status, "adapter_failure");
   assert.equal(result.admitted, false);
   assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.attemptClaim, 1);
+});
+
+test("executeSynthetic: claim reject yields zero provider calls and retryable", async () => {
+  const persistence = createSafetyPersistence();
+  persistence.claimSyntheticPaymentAttempt = async () => {
+    persistence.calls.attemptClaim += 1;
+    return { status: "rejected" };
+  };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
+  const controller = createLocalSafetyController({ persistence });
+  const result = await controller.executeSynthetic({ claim: baseClaim, provider });
+  assert.equal(result.status, "adapter_failure");
+  assert.equal(result.admitted, false);
+  assert.ok(result.retryable);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 1);
+});
+
+test("executeSynthetic: terminal attempt yields zero provider calls and retryable", async () => {
+  const persistence = createSafetyPersistence();
+  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => {
+    persistence.calls.attemptClaim += 1;
+    return {
+      status: "ready",
+      attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "processing" },
+    };
+  };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
+  const controller = createLocalSafetyController({ persistence });
+  const result = await controller.executeSynthetic({ claim: baseClaim, provider });
+  assert.equal(result.status, "adapter_failure");
+  assert.equal(result.admitted, false);
+  assert.ok(result.retryable);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 1);
+});
+
+test("executeSynthetic: unknown replay yields zero provider calls and retryable", async () => {
+  const persistence = createSafetyPersistence();
+  const tx = await persistence.withTransaction(async (tx) => {
+    await persistence.markPaymentAttemptUnknown(tx, {
+      sessionId: baseClaim.sessionId,
+      runId: baseClaim.runId,
+      attemptId: baseClaim.attemptId,
+      operationId: baseClaim.operationId,
+    });
+  });
+  assert.equal(persistence.attempts.get(`${baseClaim.sessionId}:${baseClaim.runId}:${baseClaim.attemptId}`).state, "unknown");
+  persistence.claimSyntheticPaymentAttempt = async (_tx, scope) => {
+    persistence.calls.attemptClaim += 1;
+    return {
+      status: "ready",
+      attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "unknown" },
+    };
+  };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
+  const controller = createLocalSafetyController({ persistence });
+  const result = await controller.executeSynthetic({ claim: baseClaim, provider });
+  assert.equal(result.status, "adapter_failure");
+  assert.equal(result.admitted, false);
+  assert.ok(result.retryable);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 1);
+});
+
+test("executeSynthetic: kill_switch skips claim, yields zero provider calls", async () => {
+  const persistence = createSafetyPersistence();
+  persistence.reserveSyntheticBudget = async (_tx, claim) => {
+    persistence.calls.reserve += 1;
+    return { status: "kill_switch", record: { id: claim.id } };
+  };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
+  const controller = createLocalSafetyController({ persistence });
+  const result = await controller.executeSynthetic({ claim: baseClaim, provider });
+  assert.equal(result.status, "kill_switch");
+  assert.equal(result.admitted, false);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 0);
+});
+
+test("executeSynthetic: conflict skips claim, yields zero provider calls", async () => {
+  const persistence = createSafetyPersistence();
+  persistence.reserveSyntheticBudget = async (_tx, claim) => {
+    persistence.calls.reserve += 1;
+    return { status: "conflict", record: { id: claim.id } };
+  };
+  const provider = createSyntheticPaymentProvider({ scenario: "succeeded" });
+  const controller = createLocalSafetyController({ persistence });
+  const result = await controller.executeSynthetic({ claim: baseClaim, provider });
+  assert.equal(result.status, "conflict");
+  assert.equal(result.admitted, false);
+  assert.equal(provider.inspect().calls, 0);
+  assert.equal(persistence.calls.reserve, 1);
+  assert.equal(persistence.calls.attemptClaim, 0);
 });
