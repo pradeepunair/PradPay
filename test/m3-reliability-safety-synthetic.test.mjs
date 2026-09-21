@@ -889,3 +889,147 @@ test("executeSynthetic: conflict skips claim, yields zero provider calls", async
   assert.equal(persistence.calls.reserve, 1);
   assert.equal(persistence.calls.attemptClaim, 0);
 });
+
+// Dax snake_case normalization boundary tests — defect 6243d89 follow-up
+test("Dax snake_case Dax row normalizes to camelCase attempt contract", async () => {
+  const tx = Object.freeze({ name: "tx" });
+  const dataPersistence = {
+    async withTransaction(w) { return w(tx); },
+    async markPaymentAttemptUnknown() { return null; },
+    async reserveSyntheticBudget() { return { status: "reserved", record: {} }; },
+    async claimSyntheticPaymentAttempt() {
+      return {
+        status: "ready",
+        attempt: {
+          session_id: baseClaim.sessionId,
+          run_id: baseClaim.runId,
+          attempt_id: baseClaim.attemptId,
+          operation_key: baseClaim.operationId,
+          request_hash: baseClaim.requestHash,
+          state: "submitted",
+          id: baseClaim.attemptId,
+        },
+      };
+    },
+    async readSafetyControl() { return { paymentAdmissionEnabled: true, version: 1, reasonCode: "test" }; },
+    async readUnknownPaymentAttempt() { return null; },
+    async upsertReconciliationControl() {},
+    async readReconciliationControl() { return null; },
+    async createOutboxJob() { return { status: "created" }; },
+  };
+  const outboxPersistence = {
+    async createOutboxJob() { return { status: "created" }; },
+  };
+  const persistence = createLocalSafetyPersistence({ dataPersistence, outboxPersistence });
+  const controller = createLocalSafetyController({ persistence });
+  const admission = await controller.admitSynthetic(baseClaim);
+  assert.equal(admission.status, "reserved");
+  assert.equal(admission.admitted, true);
+});
+
+test("Dax snake_case rejects malformed row missing session_id", async () => {
+  const tx = Object.freeze({ name: "tx" });
+  const dataPersistence = {
+    async withTransaction(w) { return w(tx); },
+    async markPaymentAttemptUnknown() { return null; },
+    async reserveSyntheticBudget() { return { status: "reserved", record: {} }; },
+    async claimSyntheticPaymentAttempt() {
+      return {
+        status: "ready",
+        attempt: {
+          run_id: "x",
+          attempt_id: "x",
+          operation_key: "x",
+          request_hash: "x",
+          state: "submitted",
+        },
+      };
+    },
+    async readSafetyControl() { return { paymentAdmissionEnabled: true, version: 1 }; },
+    async readUnknownPaymentAttempt() { return null; },
+    async upsertReconciliationControl() {},
+    async readReconciliationControl() { return null; },
+    async createOutboxJob() { return { status: "created" }; },
+  };
+  const outboxPersistence = {
+    async createOutboxJob() { return { status: "created" }; },
+  };
+  const persistence = createLocalSafetyPersistence({ dataPersistence, outboxPersistence });
+  const controller = createLocalSafetyController({ persistence });
+  const result = await controller.admitSynthetic(baseClaim);
+  assert.equal(result.status, "adapter_failure");
+  assert.equal(result.admitted, false);
+});
+
+test("Dax snake_case rejects wrapped/non-standard result shapes fail-closed", async () => {
+  const tx = Object.freeze({ name: "tx" });
+  const dataPersistence = {
+    async withTransaction(w) { return w(tx); },
+    async markPaymentAttemptUnknown() { return null; },
+    async reserveSyntheticBudget() { return { status: "reserved", record: {} }; },
+    async claimSyntheticPaymentAttempt() {
+      return {
+        status: "found",
+        attempt: {
+          session_id: baseClaim.sessionId,
+          run_id: baseClaim.runId,
+          state: "submitted",
+        },
+      };
+    },
+    async readSafetyControl() { return { paymentAdmissionEnabled: true, version: 1 }; },
+    async readUnknownPaymentAttempt() { return null; },
+    async upsertReconciliationControl() {},
+    async readReconciliationControl() { return null; },
+    async createOutboxJob() { return { status: "created" }; },
+  };
+  const outboxPersistence = {
+    async createOutboxJob() { return { status: "created" }; },
+  };
+  const persistence = createLocalSafetyPersistence({ dataPersistence, outboxPersistence });
+  const controller = createLocalSafetyController({ persistence });
+  const result = await controller.admitSynthetic(baseClaim);
+  assert.equal(result.status, "adapter_failure");
+  assert.equal(result.admitted, false);
+});
+
+test("Dax snake_case preserves attempt id field in normalized contract", async () => {
+  const tx = Object.freeze({ name: "tx" });
+  const dataPersistence = {
+    async withTransaction(w) { return w(tx); },
+    async markPaymentAttemptUnknown() { return null; },
+    async reserveSyntheticBudget() { return { status: "reserved", record: {} }; },
+    async claimSyntheticPaymentAttempt() {
+      return {
+        status: "ready",
+        attempt: {
+          session_id: baseClaim.sessionId,
+          run_id: baseClaim.runId,
+          attempt_id: baseClaim.attemptId,
+          operation_key: baseClaim.operationId,
+          request_hash: baseClaim.requestHash,
+          state: "submitted",
+          id: "dax_attempt_row_123",
+        },
+      };
+    },
+    async readSafetyControl() { return { paymentAdmissionEnabled: true, version: 1 }; },
+    async readUnknownPaymentAttempt() { return null; },
+    async upsertReconciliationControl() {},
+    async readReconciliationControl() { return null; },
+    async createOutboxJob() { return { status: "created" }; },
+  };
+  const outboxPersistence = {
+    async createOutboxJob() { return { status: "created" }; },
+  };
+  const persistence = createLocalSafetyPersistence({ dataPersistence, outboxPersistence });
+  const result = await persistence.claimSyntheticPaymentAttempt(tx, {
+    sessionId: baseClaim.sessionId,
+    runId: baseClaim.runId,
+    attemptId: baseClaim.attemptId,
+    operationId: baseClaim.operationId,
+    requestHash: baseClaim.requestHash,
+  });
+  assert.equal(result.status, "ready");
+  assert.equal(result.attempt.id, "dax_attempt_row_123");
+});
