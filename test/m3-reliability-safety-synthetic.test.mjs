@@ -168,6 +168,7 @@ test("safety persistence facade composes Dax data ports with reliability outbox 
   const tx = Object.freeze({ name: "transaction" });
   let reservedClaim;
   let outboxJob;
+  let attemptClaimResult;
   const dataPersistence = {
     async withTransaction(work) { return work(tx); },
     async readSafetyControl(receivedTx) {
@@ -181,7 +182,17 @@ test("safety persistence facade composes Dax data ports with reliability outbox 
     },
     async claimSyntheticPaymentAttempt(receivedTx, scope) {
       assert.equal(receivedTx, tx);
-      return { status: "ready", attempt: { sessionId: scope.sessionId, runId: scope.runId, attemptId: scope.attemptId, operationId: scope.operationId, requestHash: scope.requestHash, state: "submitted" } };
+      return attemptClaimResult ?? {
+        status: "ready",
+        attempt: {
+          id: scope.attemptId,
+          session_id: scope.sessionId,
+          run_id: scope.runId,
+          operation_key: scope.operationId,
+          request_hash: scope.requestHash,
+          state: "submitted",
+        },
+      };
     },
     async markPaymentAttemptUnknown(receivedTx, scope) {
       assert.equal(receivedTx, tx);
@@ -233,12 +244,32 @@ test("safety persistence facade composes Dax data ports with reliability outbox 
   }), {
     status: "ready",
     attempt: {
+      id: baseClaim.attemptId,
       ...scope,
       operationId: baseClaim.operationId,
       requestHash: baseClaim.requestHash,
       state: "submitted",
     },
   });
+  attemptClaimResult = { status: "rejected" };
+  assert.deepEqual(await persistence.claimSyntheticPaymentAttempt(tx, {
+    ...scope,
+    operationId: baseClaim.operationId,
+    requestHash: baseClaim.requestHash,
+  }), { status: "rejected" });
+  for (const invalid of [
+    { status: "ready", attempt: { id: baseClaim.attemptId, session_id: scope.sessionId, run_id: scope.runId, operation_key: "other", request_hash: baseClaim.requestHash, state: "submitted" } },
+    { status: "ready", attempt: { id: baseClaim.attemptId, session_id: scope.sessionId, run_id: scope.runId, operation_key: baseClaim.operationId, request_hash: baseClaim.requestHash, state: "unknown" } },
+    { status: "ready", value: { attempt: {} } },
+    { status: "rejected", attempt: {} },
+  ]) {
+    attemptClaimResult = invalid;
+    assert.deepEqual(await persistence.claimSyntheticPaymentAttempt(tx, {
+      ...scope,
+      operationId: baseClaim.operationId,
+      requestHash: baseClaim.requestHash,
+    }), { status: "rejected" });
+  }
   assert.deepEqual(await persistence.markPaymentAttemptUnknown(tx, {
     ...scope,
     operationId: baseClaim.operationId,

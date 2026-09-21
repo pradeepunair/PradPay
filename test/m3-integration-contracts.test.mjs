@@ -26,6 +26,16 @@ function createIntegratedPool() {
       if (text.startsWith("SELECT reserve_synthetic_budget")) {
         return { rows: [{ outcome: { status: "reserved", record: { id: values[0] } } }] };
       }
+      if (text.startsWith("WITH candidate AS MATERIALIZED")) {
+        return { rows: [{
+          id: values[2],
+          session_id: values[0],
+          run_id: values[1],
+          operation_key: values[3],
+          request_hash: values[4],
+          state: "submitted",
+        }], rowCount: 1 };
+      }
       if (text.startsWith("UPDATE payment_attempts SET state='unknown'")) {
         return { rows: [{ id: values[2], session_id: values[0], run_id: values[1], operation_key: values[3], state: "unknown" }], rowCount: 1 };
       }
