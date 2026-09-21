@@ -37,12 +37,14 @@ function createSafetyPersistence({
     session_id: baseClaim.sessionId,
     run_id: baseClaim.runId,
     operation_key: baseClaim.operationId,
+    request_hash: baseClaim.requestHash,
     state: "submitted",
   }]]);
   const reconciliation = new Map();
-  const calls = { read: 0, reserve: 0, reconciliationRead: 0 };
+  const calls = { read: 0, reserve: 0, attemptClaim: 0, reconciliationRead: 0 };
   return {
     calls,
+    reservations,
     outbox,
     attempts,
     reconciliation,
@@ -94,6 +96,16 @@ function createSafetyPersistence({
       const record = Object.freeze({ ...claim, decision, reservationId: "reservation_m3" });
       tx.reservations.set(key, record);
       return { status: decision, record };
+    },
+    async claimSyntheticPaymentAttempt(tx, scope) {
+      calls.attemptClaim += 1;
+      const attempt = tx.attempts.get(`${scope.sessionId}:${scope.runId}:${scope.attemptId}`);
+      if (!attempt || attempt.state !== "submitted"
+        || attempt.operation_key !== scope.operationId
+        || attempt.request_hash !== scope.requestHash) {
+        return { status: "rejected" };
+      }
+      return { status: "ready", attempt };
     },
     async markPaymentAttemptUnknown(tx, scope) {
       const key = `${scope.sessionId}:${scope.runId}:${scope.attemptId}`;
@@ -160,6 +172,10 @@ test("safety persistence facade composes Dax data ports with reliability outbox 
       reservedClaim = claim;
       return { status: "reserved", record: { id: claim.id } };
     },
+    async claimSyntheticPaymentAttempt(receivedTx, scope) {
+      assert.equal(receivedTx, tx);
+      return { status: "ready", attempt: { ...scope, state: "submitted" } };
+    },
     async markPaymentAttemptUnknown(receivedTx, scope) {
       assert.equal(receivedTx, tx);
       return { ...scope, state: "unknown" };
@@ -198,6 +214,19 @@ test("safety persistence facade composes Dax data ports with reliability outbox 
     runId: baseClaim.runId,
     attemptId: baseClaim.attemptId,
   };
+  assert.deepEqual(await persistence.claimSyntheticPaymentAttempt(tx, {
+    ...scope,
+    operationId: baseClaim.operationId,
+    requestHash: baseClaim.requestHash,
+  }), {
+    status: "ready",
+    attempt: {
+      ...scope,
+      operationId: baseClaim.operationId,
+      requestHash: baseClaim.requestHash,
+      state: "submitted",
+    },
+  });
   assert.deepEqual(await persistence.markPaymentAttemptUnknown(tx, {
     ...scope,
     operationId: baseClaim.operationId,
