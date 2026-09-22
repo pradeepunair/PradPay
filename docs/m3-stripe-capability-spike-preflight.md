@@ -1,163 +1,176 @@
-# M3 Stripe capability-spike preflight evidence
+# M3 Stripe capability-spike final non-secret preflight
 
-Status: `STOPPED BEFORE CREDENTIAL BOUNDARY`
+Status: `COMPLETE — PAUSED BEFORE CREDENTIAL BOUNDARY`
 
-Preflight timestamp: `2026-09-21T11:49:21-05:00`
+Final read-back prepared: `2026-09-22T16:29:20-05:00`
 
-Preparation candidate: `6eefb4524e7cbfe323b83e570195e43c6cfdd17a`
+Preflight input commit: `44ee2724faefdd8ab600d5bfe639a5444923c76f`
 
 Approval packet: `docs/m3-stripe-capability-spike-approval-packet.md`
 
 No credential was requested, retrieved, injected, displayed, or used. No Stripe API
-request, webhook destination, deployment, hosted-resource mutation, payment, push,
-PR, merge, or production action occurred.
+request, PaymentMethod creation/search/substitution, webhook destination,
+deployment, hosted-resource mutation, payment, push, PR, merge, or production
+action occurred.
 
-## Authority received
+## Written authority read-back
 
-Hermes reported written user approval for this bounded scope:
+Hermes reported the user's written approval and secret-rotation/custody attestation
+for exactly this scope:
 
-- Dedicated Stripe test account/profile; exact identifier must not be guessed.
-- Stripe API `2026-08-26.dahlia`.
-- ACP `2026-04-17`.
-- One capability-helper request.
-- Zero payments and USD 0.00.
-- Riley as operator and Emily as reviewer.
-- Maximum 30-minute window.
-- Provider-documented cleanup only.
-- No retry and all packet stop conditions.
+- Stripe account: `acct_1UDULUFDhOfb5F0F`
+- Sandbox label: `PradPay sandbox`
+- Pre-existing test PaymentMethod: `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
+- Stripe API: `2026-08-26.dahlia`
+- ACP: `2026-04-17`
+- Provider action: one SharedPaymentGrantedToken test-helper request
+- Usage currency: `usd`
+- Usage maximum: `100` minor units
+- Usage expiry: `2026-09-23T20:30:00-05:00` (CDT)
+- Exact expiry timestamp: `1790213400`
+- Execution window: `2026-09-23T20:10:00-05:00` through
+  `2026-09-23T20:30:00-05:00` (CDT)
+- Operator: Riley (`@integrations-reliability-engineer`)
+- Reviewer/stop authority: Emily (`@emily`)
+- Payment count: `0`
+- Payment amount: `USD 0.00`
+- Retry count: `0`
+- Cleanup: only the official revoke of the created test granted token, if needed,
+  pre-approved, and completed before the window closes
+- All packet stop conditions remain binding
 - No webhook destination, deployment, hosted resource, payment, push, PR, merge,
-  production action, or other external mutation.
+  production action, account-setting mutation, or API-version change
 
-Hermes also reported user attestation that the previously exposed test secret was
-rotated and the replacement is in approved custody. No secret value or secret-store
-content was inspected during preflight.
+All identifiers and values above are preserved literally from the supplied scope.
+No identifier was normalized, inferred, searched, or replaced.
 
-This authority is necessary but not sufficient to cross the credential boundary:
-the final read-back still requires the exact non-secret account/profile identifier,
-an exact active start/end window, and a helper request whose complete prerequisites
-are inside the approved scope.
+## Packet and repository verification
 
-## Repository and packet read-back
-
-- Worktree HEAD at preflight start:
-  `6eefb4524e7cbfe323b83e570195e43c6cfdd17a`.
-- Branch: `docs/m3-stripe-capability-spike-prep`.
-- Packet SHA-256:
-  `ef7f021a60bdbc9462300738948801ff7bdb47855774c734b674fb975e62c3a2`.
-- ADR-0003 SHA-256:
-  `e17e88757aa259d348bd3b9bdcd27a7c4dae15b48666156460b35a2a10cbc000`.
+- Branch: `docs/m3-stripe-capability-spike-prep`
+- Approval packet base: `6eefb4524e7cbfe323b83e570195e43c6cfdd17a`
+- First blocked-preflight evidence: `44ee2724faefdd8ab600d5bfe639a5444923c76f`
 - ADR-0003 remains proposed/blocked.
-- Packet lines 78-79 still contain `[OWNER-CONFIRMED VALUE]` for the non-secret
-  account reference and profile/team/organization owner.
-- Packet line 189 still contains `[APPROVED VALUE]` for the exact approved
-  sandbox/account/profile.
-- Packet lines 140-141 and 196 still contain placeholders rather than an exact
-  active start/end window.
-- Packet approval and attestation fields remain placeholders. The written approval
-  and high-level rotation/custody attestation were delivered through Hermes, but
-  the exact identifier/window fields needed for final read-back were not supplied.
+- Payment handlers remain empty in the accepted local candidate.
+- Complete checkout and delegate payment remain hard-blocked.
+- The packet now contains the exact account, PaymentMethod, versions, helper
+  inputs, execution window, operator/reviewer, zero-payment boundary, rotation and
+  custody attestation, cleanup boundary, and stop conditions.
+- Immediate execution approval remains deliberately pending.
 
-Result: account/profile identity and active window cannot be verified without
-inventing values. Packet stop conditions require stopping before credential access.
+## Official helper schema verification
 
-## Official documentation verification
+Primary official source:
 
-Primary official sources inspected without authentication:
+`https://docs.stripe.com/api/shared-payment/granted-token/create.md?api-version=2026-08-26.dahlia`
 
-1. Stripe, "Create a test SharedPaymentGrantedToken":
-   `https://docs.stripe.com/api/shared-payment/granted-token/create.md?api-version=2026-08-26.dahlia`
-2. Stripe, "Shared Payment Granted Tokens":
-   `https://docs.stripe.com/api/shared-payment/granted-token.md?api-version=2026-08-26.dahlia`
-3. Stripe Dahlia changelog evidence for the exact request-version header:
-   `https://docs.stripe.com/changelog/dahlia/2026-08-26/customer-session-improvements`
+Official cleanup source:
 
-Verified documentary facts:
+`https://docs.stripe.com/api/shared-payment/granted-token/revoke.md?api-version=2026-08-26.dahlia`
 
-- The exact versioned endpoint list includes
-  `POST /v1/test_helpers/shared_payment/granted_tokens`.
-- Stripe describes the create endpoint as creating a test
-  `SharedPaymentGrantedToken` and as available only in test mode.
-- The exact `2026-08-26.dahlia` request requires:
-  - `payment_method` — required string.
-  - `usage_limits` — required object.
-  - `usage_limits.currency` and `usage_limits.max_amount` are required; an expiry
-    may also be supplied.
-- The documented response includes a test-mode indicator and a generated granted
-  token. No response or token value was obtained in this preflight.
-- Stripe documents an optional test-helper revoke endpoint for a created granted
-  token, but no cleanup request is authorized unless its exact use is approved and
-  remains inside the active window.
+Verified for `2026-08-26.dahlia`:
 
-## Documentation/scope conflict
+- Create endpoint:
+  `POST /v1/test_helpers/shared_payment/granted_tokens`
+- Stripe describes the endpoint as test-mode-only.
+- Required request fields:
+  - `payment_method` string
+  - `usage_limits` object
+  - `usage_limits.currency`
+  - `usage_limits.max_amount`
+- `usage_limits.expires_at` is accepted as a timestamp.
+- The official cleanup endpoint is:
+  `POST /v1/test_helpers/shared_payment/granted_tokens/{id}/revoke`
+- No PaymentIntent is required by the helper request itself.
+- No provider request was executed to obtain this documentary evidence.
 
-The approved one-helper request cannot yet be constructed from approved inputs:
+Approved request-field mapping:
 
-- The official helper requires an exact `payment_method`.
-- No exact non-secret test PaymentMethod reference is supplied or approved.
-- No creation request for a PaymentMethod is authorized.
-- The packet expressly prohibits PaymentMethod substitution and says not to reuse
-  an existing test object as substituted capability evidence.
-- The helper also requires exact usage limits. Currency and a maximum amount need
-  explicit approved values even though payment execution remains zero.
-
-Supplying, guessing, searching for, or creating a PaymentMethod would broaden the
-approved scope. The helper/version combination therefore exists in official docs,
-but the exact approved request is incomplete.
-
-## Fail-closed blockers
-
-1. Exact non-secret Stripe account/profile identifier is missing.
-2. Exact owner-approved start/end timestamps are missing; only a maximum duration
-   is approved.
-3. Exact approved `payment_method` input is missing.
-4. Creation of a PaymentMethod is outside scope.
-5. Exact helper `usage_limits.currency`, `usage_limits.max_amount`, and expiry
-   policy are not approved request inputs.
-6. Packet fields have not been populated for final read-back; values must not be
-   inferred from historical dashboard observations.
-
-Any one blocker is sufficient to stop. No vault or credential tool may be called.
-
-## Final execution checklist
-
-All items must be `PASS` in one fresh read-back immediately before credential
-retrieval. Current status is shown here.
-
-| Check | Required evidence | Preflight status |
+| Official field | Approved literal value | Status |
 | --- | --- | --- |
-| Exact preparation candidate | Full commit and clean worktree | PASS at `6eefb4524e7cbfe323b83e570195e43c6cfdd17a` before this evidence artifact |
-| ADR state | ADR-0003 says proposed/blocked | PASS |
-| Payment surface | Handlers empty; complete/delegate-payment hard-blocked | PASS from accepted local candidate evidence; must re-read before execution |
-| Product scope | Bounded question and replay-only fallback approved | REPORTED APPROVED via Hermes; exact approval record must be attached without secrets |
-| Account-owner scope | One helper request, zero payment/USD0, operator/reviewer, stop conditions | REPORTED APPROVED via Hermes |
-| Rotation/custody | Owner attests rotation and approved custody; no value exposed | REPORTED ATTESTED via Hermes; must remain non-secret |
-| Account/profile identity | Exact current non-secret identifier matches approved target | BLOCKED — missing |
-| Test mode | Fresh non-secret read-back proves exact target is test mode | BLOCKED until exact identifier/read-back; no credential use permitted for preflight |
-| Stripe API pin | Request header exactly `2026-08-26.dahlia` | DOCUMENTED; execution still blocked |
-| ACP pin | Repository artifact exactly `2026-04-17` | PASS from accepted repository evidence |
-| Helper endpoint | Official exact-version docs list create test helper | PASS |
-| Helper prerequisites | Exact approved PaymentMethod and usage limits | BLOCKED — missing/out of scope |
-| Provider request count | One helper call, no retry | APPROVED BOUNDARY; not executed |
-| Cleanup | Optional one exact documented revoke only if pre-approved and needed | CONDITIONAL; no created object exists |
-| Payment boundary | Zero PaymentIntent/confirmation/capture, count 0, USD0 | PASS AS PROHIBITION; not executed |
-| Active window | Exact owner-approved start/end, at most 30 minutes | BLOCKED — missing |
-| Immediate approval | User confirms immediately after full final read-back | NOT REQUESTED because earlier blockers prevent reaching boundary |
-| Credential retrieval | Vault injection only after every prior check passes | NOT PERMITTED |
+| `payment_method` | `pm_1UIbCpFDhOfb5F0FVPrBIB0T` | COMPLETE |
+| `usage_limits.currency` | `usd` | COMPLETE |
+| `usage_limits.max_amount` | `100` | COMPLETE |
+| `usage_limits.expires_at` | `1790213400` | COMPLETE |
+| Stripe request version | `2026-08-26.dahlia` | COMPLETE |
 
-## Required unblock evidence
+The expiry conversion was independently computed from
+`2026-09-23T20:30:00-05:00` and equals `1790213400`. The earlier non-exact
+conversion that inherited host seconds was rejected and is not used.
 
-Before another preflight, provide through a non-secret approval channel:
+## Exact final read-back checklist
 
-1. Exact non-secret Stripe account/profile identifier and owner/profile label.
-2. Exact start and end timestamps, no more than 30 minutes apart.
-3. Product/account-owner decision for the required `payment_method` input:
-   - approve one exact pre-existing test PaymentMethod reference for this helper,
-     while reconciling the packet's no-substitution rule; or
-   - approve a separately bounded prerequisite package to create one; or
-   - decline and retain replay-only behavior.
-4. Exact approved helper usage limits: currency, maximum amount, and expiry policy.
-5. Updated packet read-back showing those values and confirming no scope expansion.
-6. A new immediate approval after Emily presents the complete final checklist.
+| Check | Exact evidence | Status |
+| --- | --- | --- |
+| Account/profile | `acct_1UDULUFDhOfb5F0F` / `PradPay sandbox` | PASS — owner supplied |
+| Test mode | Owner identifies exact account as dedicated test account | PASS subject to mandatory runtime `livemode:false`/test-mode check; mismatch stops |
+| PaymentMethod | `pm_1UIbCpFDhOfb5F0FVPrBIB0T` | PASS — one pre-existing test reference supplied; do not search/create/substitute |
+| Stripe API | `2026-08-26.dahlia` | PASS |
+| ACP | `2026-04-17` | PASS |
+| Helper endpoint | Official exact-version create test-helper endpoint | PASS |
+| Helper schema | PaymentMethod and usage limits match required fields | PASS |
+| Currency | `usd` | PASS |
+| Maximum amount | `100` minor units | PASS |
+| Expiry | `1790213400` / `2026-09-23T20:30:00-05:00` | PASS |
+| Provider request count | One create-helper request | PASS AS APPROVED BOUNDARY; not executed |
+| Retry | None | PASS AS APPROVED BOUNDARY |
+| Payment | Count `0`; `USD 0.00`; no PaymentIntent/confirmation/capture | PASS AS PROHIBITION |
+| Cleanup | At most one official revoke of the created token, if needed before window end | PASS AS CONDITIONAL BOUNDARY |
+| Window | `2026-09-23T20:10:00-05:00` to `2026-09-23T20:30:00-05:00` | PASS; execution prohibited outside window |
+| Operator | Riley | PASS |
+| Reviewer/stop authority | Emily | PASS |
+| Product scope/fallback | Written approval reported via Hermes | PASS |
+| Account-owner scope | Written approval reported via Hermes | PASS |
+| Rotation/custody | Owner attested rotated secret and approved custody; no value inspected | PASS AS OWNER ATTESTATION |
+| ADR state | Proposed/blocked | PASS |
+| Payment handlers | Empty; complete/delegate-payment hard-blocked | PASS from accepted candidate; re-read immediately before credential retrieval |
+| Immediate approval | Must be supplied after this final read-back and during the active window | PENDING — NOT REQUESTED IN THIS PACKAGE |
+| Credential retrieval | Vault injection only after immediate approval and fresh runtime checks | PAUSED / NOT PERMITTED YET |
 
-Until then, retain replay-only behavior, empty payment handlers, hard-blocked
-complete/delegate-payment, and ADR-0003 proposed/blocked.
+## Mandatory immediate boundary checks
+
+After the window opens and before any vault or credential action, Emily must freshly
+read back all of the following:
+
+1. Current time is on or after `2026-09-23T20:10:00-05:00` and before
+   `2026-09-23T20:30:00-05:00`.
+2. Immediate user approval explicitly names this exact final read-back and still
+   authorizes credential retrieval plus one helper request.
+3. The exact target remains `acct_1UDULUFDhOfb5F0F` / `PradPay sandbox`.
+4. The injected credential resolves to test mode for that exact account; any
+   mismatch or live-mode indicator stops before the helper request.
+5. Request version remains `2026-08-26.dahlia`.
+6. Request inputs remain exactly:
+   - `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
+   - `usd`
+   - `100`
+   - `1790213400`
+7. ADR-0003 remains proposed/blocked; payment handlers remain empty; complete and
+   delegate payment remain hard-blocked.
+8. No payment, destination, deployment, hosted mutation, second request, retry, or
+   broader scope has been added.
+
+If any check fails, do not retrieve/inject a credential and do not call Stripe.
+
+## Stop conditions after immediate approval
+
+Stop without retry if:
+
+- The current time is outside the approved window.
+- Account/profile or test-mode identity differs.
+- Any literal request input differs.
+- Stripe requires a different PaymentMethod, version, field, permission, account
+  setting, destination, deployment, hosted resource, or payment action.
+- Authentication fails, times out, is rate-limited, or is ambiguous.
+- The response is live-mode, unexpected, unsafe to redact, or exposes sensitive
+  data.
+- A credential appears in output, logs, screenshots, chat, docs, or model context.
+- The one helper request returns any result. No retry or further capability call is
+  allowed; only the pre-approved official revoke may follow if needed before the
+  window closes.
+
+## Credential boundary
+
+The package is paused immediately before credential retrieval. Credentials become
+required only when, during the approved window and after immediate user approval,
+Riley is about to authenticate the single helper request. No vault action or Stripe
+call is authorized by this preflight alone.

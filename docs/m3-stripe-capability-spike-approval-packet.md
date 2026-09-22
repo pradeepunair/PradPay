@@ -1,6 +1,6 @@
 # M3 Stripe sandbox capability-spike approval packet
 
-Status: preparation complete; approvals, credential attestation, and provider evidence absent. Do not execute.
+Status: non-secret preflight inputs complete; immediate credential-boundary approval pending. Do not execute.
 
 Package ID: `M3-STRIPE-CAP-SPIKE-001-PREP`
 
@@ -56,14 +56,15 @@ replay-only product path:
 - Require a new Product/account-owner approval packet for any alternative custom
   completion path or later provider test.
 
-Pete approval field:
+Pete approval read-back:
 
-- Bounded question approved: `[YES/NO]`
-- Replay-only fallback approved: `[YES/NO]`
-- Accepted result classes: `[SUPPORTED/UNSUPPORTED/AMBIGUOUS]`
-- Product approver: `[NAME]`
-- Approval timestamp: `[ISO-8601 WITH TIME ZONE]`
-- Conditions or changes: `[NONE OR TEXT]`
+- Bounded question approved: `YES — written approval reported by Hermes`
+- Replay-only fallback approved: `YES — written approval reported by Hermes`
+- Accepted result classes: `SUPPORTED / UNSUPPORTED / AMBIGUOUS`
+- Product approver: `Pete`
+- Approval receipt recorded: `2026-09-22T16:29:20-05:00`
+- Conditions: exact scope and stop conditions in this packet; immediate approval
+  remains separately required at the credential boundary.
 
 Until every required `YES` and timestamp is present, stop before credential access.
 
@@ -74,13 +75,15 @@ test mode. Historical observation is not current evidence. Before execution, the
 account owner must freshly confirm all non-secret identity fields below without
 exposing any credential value:
 
-- Stripe account/sandbox label: `PradPay sandbox` or owner-corrected label
-- Non-secret account identifier/reference: `[OWNER-CONFIRMED VALUE]`
-- Profile/team/organization owner: `[OWNER-CONFIRMED VALUE]`
+- Stripe account/sandbox label: `PradPay sandbox`
+- Non-secret account identifier/reference: `acct_1UDULUFDhOfb5F0F`
+- Approved test PaymentMethod reference: `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
+- Profile/account owner: `Prads`
 - Mode: `test` only
-- Current account access confirmed at: `[ISO-8601 WITH TIME ZONE]`
-- No live-mode context selected: `[YES/NO]`
-- No existing test object is to be reused as substituted capability evidence: `[YES/NO]`
+- Owner-supplied identity recorded at: `2026-09-22T16:29:20-05:00`
+- No live-mode context selected: `YES — owner identified this as the dedicated test account; recheck immediately before authentication`
+- Existing test object substitution: `NONE`; the literal PaymentMethod above is the
+  one explicitly supplied and approved for this helper request.
 
 A mismatch in label, account, profile, owner, or mode is a stop condition, not a
 reason to search another account.
@@ -121,6 +124,17 @@ count is zero. Approved payment amount is USD 0.00. No PaymentIntent, confirmati
 capture, refund, customer, PaymentMethod substitution, webhook destination,
 deployment, hosted resource, or account-setting mutation is in scope.
 
+Exact helper inputs are fixed as follows:
+
+- `payment_method`: `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
+- `usage_limits.currency`: `usd`
+- `usage_limits.max_amount`: `100` minor units
+- `usage_limits.expires_at`: `1790213400`
+  (`2026-09-23T20:30:00-05:00`, CDT)
+
+These values must be preserved literally. Do not search for, create, replace,
+normalize, or otherwise substitute a PaymentMethod or helper input.
+
 ## Requested operator and supervision
 
 - Requested execution operator: Riley (`@integrations-reliability-engineer`).
@@ -137,8 +151,8 @@ logs, screenshots, docs, fixtures, or Git.
 
 Requested maximum execution window: one owner-scheduled 30-minute window.
 
-- Approved start: `[ISO-8601 WITH TIME ZONE]`
-- Approved end: `[ISO-8601 WITH TIME ZONE; <= 30 MINUTES AFTER START]`
+- Approved start: `2026-09-23T20:10:00-05:00` (CDT)
+- Approved end: `2026-09-23T20:30:00-05:00` (CDT)
 - Approval expires automatically at the end timestamp or, if earlier, after the
   first helper result and the one pre-approved provider-documented cleanup request.
   If cleanup is not pre-approved or not required, approval expires at the first
@@ -171,13 +185,13 @@ After the first helper result:
 This attestation must be completed by the account owner before any tool or operator
 is allowed to retrieve or inject a Stripe credential:
 
-- Previously exposed standard Stripe test secret rotated: `[YES/NO]`
-- Rotation timestamp: `[ISO-8601 WITH TIME ZONE]`
-- Rotation performed/confirmed by: `[OWNER NAME]`
-- Replacement stored only in approved secret store: `[YES/NO]`
-- Approved secret-store class (not value/path containing a value): `[CLASS]`
-- Access limited to requested operator/window: `[YES/NO]`
-- Rotation/expiry after spike assigned to: `[OWNER NAME]`
+- Previously exposed standard Stripe test secret rotated: `YES — owner attested via Hermes`
+- Rotation timestamp: `OWNER-ATTESTED; exact secret-operation timestamp not recorded in this non-secret packet`
+- Rotation performed/confirmed by: `Prads`
+- Replacement stored only in approved secret store: `YES — owner attested via Hermes`
+- Approved secret-store class: `owner-approved credential custody; secret location/value intentionally undisclosed`
+- Access limited to requested operator/window: `YES — approved scope; enforce at immediate boundary check`
+- Rotation/expiry after spike assigned to: `Prads`
 - Credential value recorded in this packet: `NO — MUST REMAIN NO`
 
 A missing, `NO`, stale, or ambiguous attestation blocks the spike.
@@ -186,16 +200,22 @@ A missing, `NO`, stale, or ambiguous attestation blocks the spike.
 
 Prads must approve all fields together:
 
-- Exact sandbox/account/profile: `[APPROVED VALUE]`
-- Stripe API pin `2026-08-26.dahlia`: `[YES/NO]`
-- ACP pin `2026-04-17`: `[YES/NO]`
-- One capability-helper request: `[YES/NO]`
-- Optional single cleanup request: `[YES/NO OR NOT AUTHORIZED]`
-- Payment count `0` and amount `USD 0.00`: `[YES/NO]`
-- Operator Riley and reviewer Emily: `[YES/NO]`
-- Exact start/end window: `[VALUES]`
-- Stop conditions and replay-only fallback acknowledged: `[YES/NO]`
-- Immediate approval timestamp: `[ISO-8601 WITH TIME ZONE]`
+- Exact sandbox/account/profile: `acct_1UDULUFDhOfb5F0F` / `PradPay sandbox`
+- Exact test PaymentMethod: `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
+- Stripe API pin `2026-08-26.dahlia`: `YES`
+- ACP pin `2026-04-17`: `YES`
+- One capability-helper request: `YES`
+- Usage limits: `usd`, `100` minor units, expiry `1790213400`
+  (`2026-09-23T20:30:00-05:00` CDT)
+- Optional single cleanup request: `YES, only the documented revoke of the object
+  created by the one helper request, if needed before window end`
+- Payment count `0` and amount `USD 0.00`: `YES`
+- Operator Riley and reviewer Emily: `YES`
+- Exact start/end window: `2026-09-23T20:10:00-05:00` through
+  `2026-09-23T20:30:00-05:00` (CDT)
+- Stop conditions and replay-only fallback acknowledged: `YES`
+- Written approval receipt recorded: `2026-09-22T16:29:20-05:00`
+- Immediate approval timestamp: `PENDING — DO NOT REQUEST UNTIL FINAL READ-BACK IS RETURNED`
 
 Approval to prepare this packet is not approval to access credentials or execute
 the spike.
@@ -274,10 +294,10 @@ blocker/evidence to Emily, Pete, and the account owner.
 
 ## Approval state and next owner
 
-- Pete/Product approval: `MISSING — BLOCKED`
-- Prads/account-owner execution approval: `MISSING — BLOCKED`
-- Secret rotation/custody attestation: `MISSING — BLOCKED`
+- Pete/Product approval: `RECEIVED — immediate boundary approval still pending`
+- Prads/account-owner bounded scope approval: `RECEIVED — immediate boundary approval still pending`
+- Secret rotation/custody attestation: `RECEIVED — no value inspected`
 - Authenticated capability evidence: `MISSING — NOT EXECUTED`
 - ADR-0003: `PROPOSED/BLOCKED`
-- Next owner: Pete reviews the bounded question and replay-only fallback; then
-  Prads may approve or reject the exact credentialed execution packet.
+- Next owner: Emily returns the exact final read-back and pauses. Prads must provide
+  immediate approval during the active window before any credential retrieval.
