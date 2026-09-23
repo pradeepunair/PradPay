@@ -1,17 +1,20 @@
 # M3 Stripe capability-spike final non-secret preflight
 
-Status: `COMPLETE — PAUSED BEFORE CREDENTIAL BOUNDARY`
+Status: `COMPLETE — HARD-DISABLED, PAUSED BEFORE CREDENTIAL BOUNDARY`
 
-This September 23 22:35 CDT through September 24 00:35 CDT two-hour final read-back supersedes every earlier execution-window draft. Earlier approval-receipt timestamps remain historical metadata only.
+The time and request details below are historical scope only. Current code rejects all
+production entry-point calls before inspecting input, creating state, capturing a clock,
+retrieving credentials, or dispatching. No receipt verifier or network transport is
+available. This preflight is not execution authorization; the previous candidate and
+all scheduled windows remain non-executable.
 
-The NTP-corroborated host epoch is the sole execution-time authority. The local
-guard requires exactly one successful selected `time.apple.com` sample, numeric
-absolute offset no greater than 1 second, and evidence age from 0 through 60
-seconds. Session, chat, document, and approval-receipt date metadata are
-non-authoritative. Any parse, success, target, offset, freshness, outer-window,
-inner-lease, request-hash, or one-shot-claim failure stops before credential access.
-No date may be inferred, normalized, silently substituted, or implemented by
-changing system time.
+Any future separately approved verifier must use NTP-corroborated host epoch as the
+sole execution-time authority. Local parser tests require exactly one successful
+selected `time.apple.com` sample, numeric absolute offset no greater than 1 second,
+and evidence age 0 through 60 seconds. The hard-disabled production path performs no
+such check. Session, chat, document, and approval-receipt date metadata are
+non-authoritative. No date may be inferred, normalized, silently substituted, or
+implemented by changing system time.
 
 Final read-back prepared: `2026-09-22T16:29:20-05:00`
 
@@ -72,9 +75,9 @@ No identifier was normalized, inferred, searched, or replaced.
 - Local guard: `docs/m3-stripe-spike-guard.md`
 - Frozen approved-request SHA-256:
   `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`
-- Action lease: immutable, 1 through 600 seconds, capped by `1790228100`.
-- Atomic one-shot claim is consumed before any credential or dispatch callback.
-- Immediate execution approval remains deliberately pending.
+- Lease/window/request and atomic-state properties are tested only on dormant local fake-core paths; no production approval is parsed and no runtime claim is consumed.
+- Product/Security have not established a signer trust root, authenticated operator identity source, or protected durable nonce store.
+- Immediate execution approval cannot be made effective until the verified receipt design is implemented and independently QA-approved.
 
 ## Official helper schema verification
 
@@ -145,42 +148,33 @@ The corrected expiry conversion was independently computed from
 | Rotation/custody | Owner attested rotated secret and approved custody; no value inspected | PASS AS OWNER ATTESTATION |
 | ADR state | Proposed/blocked | PASS |
 | Payment handlers | Empty; complete/delegate-payment hard-blocked | PASS from accepted candidate; re-read immediately before credential retrieval |
-| Immediate approval | Must be supplied after this final read-back and during the active window | PENDING — NOT REQUESTED IN THIS PACKAGE |
-| Credential retrieval | Vault injection only after immediate approval and fresh runtime checks | PAUSED / NOT PERMITTED YET |
+| Signer trust root, authenticated operator identity, protected nonce store | Not established | HARD BLOCK — see `docs/m3-stripe-owner-approval-setup.md` |
+| Immediate execution approval | No verifiable one-time owner receipt mechanism | HARD-DISABLED — a new execution approval cannot activate this candidate |
+| Credential retrieval | Entry point and provider transport are disabled | PROHIBITED |
 
-## Mandatory immediate boundary checks
+## Future eligibility gates (not active)
 
-After the window opens and before any vault or credential action, Emily must freshly
-read back all of the following:
+The following are design requirements for a future separately approved and QA-verified
+receipt implementation, not operational instructions. They cannot authorize credential
+retrieval or provider calls on this candidate. Any missing or failed gate keeps the
+entry point hard-disabled:
 
-1. The deterministic parser accepts exactly one successful selected NTP sample
-   with numeric absolute offset no greater than 1 second and age no greater than
-   60 seconds. The NTP-corroborated host clock reports a time on or after
-   `2026-09-23T22:35:00-05:00` and before `2026-09-24T00:35:00-05:00`.
-   Record the host RFC-3339 time, Unix epoch, and NTP synchronization evidence.
-   Session/chat/document timestamps are non-authoritative; any unresolved mismatch stops.
-2. Immediate user approval explicitly names this exact final read-back and still
-   authorizes credential retrieval plus one helper request.
-3. The exact target remains `acct_1UDULUFDhOfb5F0F` / `PradPay sandbox`.
-4. The injected credential resolves to test mode for that exact account; any
-   mismatch or live-mode indicator stops before the helper request.
-5. Request version remains `2026-08-26.dahlia`.
-6. Request inputs remain exactly:
-   - `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
-   - `usd`
-   - `100`
-   - `1790228100`
-7. ADR-0003 remains proposed/blocked; payment handlers remain empty; complete and
-   delegate payment remain hard-blocked.
-8. The approved request hash is
-   `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`,
-   the immutable action lease is active, and the one-shot claim is unconsumed.
-9. No payment, destination, deployment, hosted mutation, second request, retry, or
-   broader scope has been added.
+1. Independently verify signer trust root, authorized owner, operator identity, and
+   receipt signature over exact candidate/request/account/profile/API/ACP/scope fields.
+2. Verify owner approval time, unpredictable nonce, exact outer-window bounds, and an
+   immutable lease of at most 600 seconds capped by the outer end.
+3. Atomically consume the nonce in approved protected durable state before any
+   credential callback; fail closed on replay, race loss, storage uncertainty, or
+   rollback ambiguity.
+4. Re-verify the same candidate, request, owner/operator, NTP evidence, window, and
+   lease immediately before any future provider dispatch.
+5. Assert all rejected paths leave credential/provider callback counters at zero.
 
-If any check fails, do not retrieve/inject a credential and do not call Stripe.
+This candidate has no approved signer trust root, authenticated operator identity,
+protected nonce store, receipt verifier, or network transport. Do not retrieve a
+credential or perform a provider action.
 
-## Stop conditions after immediate approval
+## Stop conditions for any future separately authorized attempt
 
 Stop without retry if:
 

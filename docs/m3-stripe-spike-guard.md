@@ -2,19 +2,21 @@
 
 Package: `M3-STRIPE-SPIKE-GUARD-001`
 
-Status: local guard implemented; external execution remains disabled and requires a
-separate exact candidate review, active-window read-back, and immediate owner
-approval.
+Status: provider-capable execution is hard-disabled. The entry point rejects every
+call before inspecting input, creating state, retrieving credentials, or dispatching.
+The transport module contains no network implementation. Re-enabling execution is
+blocked until Product/Security-approved owner-authentication trust anchors and a
+replay-resistant receipt mechanism are established and independently QA-verified.
 
 ## Boundary
 
-This package contains no credential value and performs no provider call during tests
-or ordinary CI. The production entry point binds the exact Stripe helper transport,
-real NTP host-clock adapter, canonical durable state path, frozen request, and
-abortable deadline internally; callers may supply only the immediate approval and
-approved server-side credential adapter. Local guard development and testing are
-not constrained by the provider execution window; the outer and inner windows
-apply only to a future explicitly approved external dispatch.
+This package contains no credential value and performs no provider call in tests or
+ordinary CI. The production entry point now hard-fails before input inspection,
+state creation, clock capture, credential retrieval, or dispatch. The provider
+transport module contains no network implementation. The internal guard core and
+clock helpers remain reachable only to local tests using synthetic fixtures and fake
+adapters; they are not reachable from the production entry point. Local development
+continues without any provider window or execution approval.
 
 ## Normative outer window
 
@@ -23,6 +25,11 @@ apply only to a future explicitly approved external dispatch.
 - Duration: `7200` seconds
 
 ## Deterministic clock gate
+
+The parser and host-clock adapter below are retained for future verifier-only
+implementation and are exercised only with synthetic test fixtures. The hard-disabled
+production entry point invokes neither one. They must not be interpreted as evidence
+of live clock validation or execution authority.
 
 `createHostClockCapture` invokes exactly `sntp -d time.apple.com` and records the
 command, target, exit status, observation epoch, current host epoch, output, and
@@ -40,31 +47,29 @@ wrong-command, wrong-target, disagreeing, or excessive-offset evidence.
 The guard never changes system time. Session, chat, and document date metadata do
 not enter its execution decision.
 
-## Fixed production composition
+## Disabled production boundary
 
-`executeApprovedStripeCapabilitySpike` accepts only the immediate approval and an
-approved server-side credential adapter. It internally binds `createHostClockCapture`
-with the host `sntp` command and `Date.now`, the frozen request, the fixed Stripe
-transport, and one canonical state directory under the user's PaymentLab state
-root keyed by the approved request hash. Caller-supplied clocks, request bodies,
-transport functions, or alternate fence directories are rejected.
+`executeApprovedStripeCapabilitySpike` always rejects with the fixed disabled error
+before reading caller fields. It creates no state, captures no clock, and invokes no
+credential/provider callback. The transport module contains no HTTP client, fetch,
+endpoint, or authorization-header implementation. No receipt verification is
+implemented because Product/Security have not established an independently trusted
+signer lifecycle, authenticated operator identity source, and protected durable nonce
+store. Do not restore a provider-capable import or call path until those prerequisites
+are explicitly approved, implemented, independently reviewed, and QA-verified.
 
-The fixed transport uses one POST, `redirect: "error"`, the pinned Stripe version,
-and the action lease's `AbortSignal`. It must consume a fresh `authorizeSend`
-callback immediately before `fetch`; credential retrieval and dispatch are raced
-against the absolute lease deadline. An expiry abort cannot authorize a later send
-or retry.
+The fixed account/request metadata and timing policy below are retained as historical
+scope only; they do not authorize execution.
 
-## Immutable action lease
 
-The approval record uses only the fixed package ID `M3-STRIPE-CAP-SPIKE-001-PREP`; caller-supplied identifiers are rejected before any value can be persisted. The approval epoch must equal the first trusted host-clock epoch.
-The lease duration is between 1 and 600 seconds and is capped at the outer end. A
-lease cannot be extended or re-anchored, and its end is exclusive. The trusted
-host clock is captured again immediately before credential retrieval and again
-immediately before dispatch; either step fails closed when the lease or outer
-window has expired.
+## Historical test-only lease constraints
 
-Clock authority is the literal `ntp-corroborated-host-epoch`.
+The internal fake-core tests model these intended boundaries; the production entry point
+never creates or validates an approval lease. Any future signed receipt must bind an
+owner approval time, use an action lease from 1 to 600 seconds capped at outer end,
+and require fresh independent time verification immediately before credential access
+and dispatch. No lease or old scheduled window presently authorizes execution.
+
 
 ## Frozen request
 
@@ -78,49 +83,29 @@ and transport policy. Any additional, missing, or changed field is rejected,
 including alternate account/version/input/PaymentMethod/SPT capability, retry,
 redirect, fallback, resubmit, or more than one attempt.
 
-## Credential metadata gate
+## Dormant test-only guard-core behavior
 
-Credential retrieval remains injected and outside this package, but the returned
-trusted metadata must name exactly `acct_1UDULUFDhOfb5F0F` and must assert
-`livemode: false`. Missing metadata, a different account, or any live-mode value
-blocks dispatch after permanently consuming the one-shot claim. Credential values
-are never persisted or returned.
+The internal guard-core module retains the lease, request, credential-metadata,
+and atomic one-shot logic for local-only tests with injected fake adapters. It is
+not imported by the production entry point. Tests of this internal core do not
+establish owner approval or make its effects reachable from the provider boundary.
+A future verifier package must not restore production reachability before trust
+anchors are approved.
 
-## Atomic durable one-shot fence
-
-Before either injected credential retrieval or injected dispatch callback runs, the
-guard atomically creates a private `stripe-spike-one-shot` directory and writes a
-mode-0600 safe claim record. Directory creation is the compare-and-set boundary:
-only one concurrent process succeeds. The claim file and containing directory are
-`fsync`ed before credential access, making the consumed fence durable across a
-process or host interruption. Duplicate, race, stale-lease, and re-anchor attempts
-fail before callbacks. The claim remains consumed after credential failure,
-dispatch failure, timeout, or ambiguous outcome; there is no reset or retry path.
-
-Only safe approval, lease, clock-authority, and request-hash metadata is persisted.
-No credential or raw provider response is stored by the guard. The production
-transport returns only allowlisted status/classification fields and irreversible
-SHA-256 fingerprints of provider request/object references; raw `req_`, `spt_`, or
-other reusable provider identifiers cannot leave the transport boundary.
 
 ## Test contract
 
-`test/m3-stripe-spike-guard.test.mjs` verifies:
+`test/m3-stripe-spike-guard.test.mjs` verifies both the dormant pure/fake guard-core
+utilities and the hard-disabled production boundary. The production-specific tests
+assert absent, malformed, forged, stale, replay-shaped, wrong-owner, wrong-candidate,
+wrong-request/account/operator/window/scope inputs all fail before credential or
+provider callbacks; hostile property getters are not evaluated. Direct transport
+calls reject, and static source checks ensure the public production modules contain no
+network implementation, endpoint, authorization header, or credential callback.
 
-- selected-NTP command capture, success, parse, unambiguous target binding, numeric offset, ±1-second and 0–60-second boundaries;
-- fixed production clock, request, transport, and canonical state path with alternate caller fields rejected;
-- exact inclusive outer start and exclusive outer end;
-- immutable action lease, outer-end cap, exclusive lease end, repeated boundary checks, and abort at the absolute deadline;
-- stable approved hash and exact literal mismatch rejection;
-- alternate account/profile/version/ACP/input/PaymentMethod/SPT and unsafe transport rejection;
-- exact credential account and test-mode metadata enforcement;
-- fixed one-POST transport consuming `authorizeSend` and `AbortSignal` with redirects disabled;
-- raw Stripe request and object identifiers replaced by irreversible SHA-256 fingerprints;
-- atomic race and duplicate fencing with durable claim synchronization;
-- one-shot consumption before fake credential and fake dispatch callbacks;
-- no fake credential retrieval or fake dispatch for every pre-dispatch rejection;
-- no dispatch after credential-time lease expiry or credential metadata mismatch;
-- ambiguous fake dispatch and fake credential failure permanently consume the claim.
+Other local tests exercise NTP parsing, literal request validation, lease math, and
+atomic test-state behavior using fake fixtures only. Their positive fake-core tests
+are not production authorization and do not enable the provider boundary.
 
-The test package performs no provider, vault, credential, webhook, deployment,
-hosted-resource, payment, push, PR, or merge action.
+No credential values, key generation/provisioning, signer setup, provider/vault,
+webhook, deployment, hosted-resource, payment, push, PR, or merge action occurs.

@@ -1,6 +1,6 @@
 # M3 Stripe sandbox capability-spike approval packet
 
-Status: non-secret preflight inputs complete; immediate credential-boundary approval pending. Do not execute.
+Status: request scope is documented; execution is HARD-DISABLED. No immediate owner-authenticated receipt mechanism or trust anchors are established. Do not execute.
 
 The September 23 22:35 CDT through September 24 00:35 CDT two-hour window below supersedes every earlier execution-window draft. Earlier approval-receipt timestamps are historical metadata only.
 
@@ -76,7 +76,8 @@ Pete approval read-back:
 - Product approver: `Pete`
 - Approval receipt recorded: `2026-09-22T16:29:20-05:00`
 - Conditions: exact scope and stop conditions in this packet; immediate approval
-  remains separately required at the credential boundary.
+  remains separately blocked until a cryptographically verified owner receipt and
+  approved trust anchors exist.
 
 Until every required `YES` and timestamp is present, stop before credential access.
 
@@ -334,10 +335,13 @@ blocker/evidence to Emily, Pete, and the account owner.
 
 ## Approval state and next owner
 
-- Pete/Product approval: `RECEIVED — immediate boundary approval still pending`
-- Prads/account-owner bounded scope approval: `RECEIVED — immediate boundary approval still pending`
-- Secret rotation/custody attestation: `RECEIVED — no value inspected`
+- Pete/Product approval: `RECEIVED — does not authorize execution`
+- Prads/account-owner bounded scope approval: `RECEIVED — does not authorize execution`
+- Secret rotation/custody attestation: `RECEIVED — no value inspected; not an execution authorization`
 - Authenticated capability evidence: `MISSING — NOT EXECUTED`
+- Owner signer trust root, authenticated operator identity, protected nonce store: `NOT ESTABLISHED`
 - ADR-0003: `PROPOSED/BLOCKED`
-- Next owner: Emily returns the exact final read-back and pauses. Prads must provide
-  immediate approval during the active window before any credential retrieval.
+- Next owner: Prads must select/approve the signer lifecycle, operator identity source,
+  and protected nonce store in `docs/m3-stripe-owner-approval-setup.md`. The guard remains
+  hard-disabled. After setup, engineering must implement and QA a verifier-only candidate;
+  any provider action needs separate fresh exact approval.

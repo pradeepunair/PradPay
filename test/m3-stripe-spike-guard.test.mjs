@@ -23,7 +23,7 @@ import {
   createApprovalLease,
   createFilesystemOneShot,
 } from "../lib/spike-guard/state.mjs";
-import { CANONICAL_SPIKE_STATE_DIRECTORY, executeApprovedStripeCapabilitySpike } from "../lib/spike-guard/guard.mjs";
+import { CANONICAL_SPIKE_STATE_DIRECTORY, SPIKE_EXECUTION_DISABLED_MESSAGE, executeApprovedStripeCapabilitySpike } from "../lib/spike-guard/guard.mjs";
 import { executeStripeSpikeGuardCore, projectProviderOutcome } from "../lib/spike-guard/guard-core.mjs";
 import { createHostClockCapture } from "../lib/spike-guard/host-clock.mjs";
 import { createStripeGrantedTokenTransport } from "../lib/spike-guard/stripe-transport.mjs";
@@ -233,49 +233,70 @@ test("request boundary rejects retry, redirect, fallback, resubmit, multiple att
   for (const mutate of mutations) assert.throws(() => assertExactSpikeRequest(cloneRequest(mutate)));
 });
 
-test("production execution boundary fixes the state path, clock, request, and transport", async () => {
+test("production entry point is hard-disabled before inspecting approvals or callbacks", async () => {
   assert.match(CANONICAL_SPIKE_STATE_DIRECTORY, new RegExp(FROZEN_REQUEST_HASH));
-  await assert.rejects(executeApprovedStripeCapabilitySpike({
-    approval: approval(),
-    getCredential: async () => null,
-    stateDirectory: "/tmp/alternate-fence",
-  }), (error) => error.message === SAFE_EXECUTION_FAILURE_MESSAGE);
-  await assert.rejects(executeApprovedStripeCapabilitySpike({
-    approval: approval(),
-    getCredential: async () => null,
-    captureClock: clockCapture(),
-  }), (error) => error.message === SAFE_EXECUTION_FAILURE_MESSAGE);
+  const cases = [
+    undefined,
+    null,
+    { approval: undefined },
+    { approval: "malformed" },
+    { approval: { ...approval(), signature: "forged-untrusted-signature" } },
+    { approval: { ...approval(), issuedAt: EXECUTION_EPOCH - 7200, expiresAt: EXECUTION_EPOCH - 1 } },
+    { approval: { ...approval(), nonce: "already-consumed-nonce" } },
+    { approval: { ...approval(), ownerIdentity: "wrong-owner" } },
+    { approval: { ...approval(), candidateCommit: "0".repeat(40) } },
+    { approval: { ...approval(), requestHash: "0".repeat(64) } },
+    { approval: { ...approval(), account: "acct_wrong", profile: "wrong-profile" } },
+    { approval: { ...approval(), operatorIdentity: "wrong-operator" } },
+    { approval: { ...approval(), outerStartEpoch: OUTER_START_EPOCH + 1, outerEndEpoch: OUTER_END_EPOCH } },
+    { approval: { ...approval(), actionScope: { requestCount: 2, paymentCount: 1, cleanup: "unbounded" } } },
+    { approval: approval(), getCredential: async () => null },
+  ];
+  for (const input of cases) {
+    const calls = { credential: 0, provider: 0 };
+    await assert.rejects(executeApprovedStripeCapabilitySpike({
+      ...input,
+      getCredential: async () => { calls.credential += 1; return null; },
+      sendRequest: async () => { calls.provider += 1; },
+    }), (error) => error.message === SPIKE_EXECUTION_DISABLED_MESSAGE);
+    assert.deepEqual(calls, { credential: 0, provider: 0 });
+  }
+  const hostile = {};
+  let inputReads = 0;
+  Object.defineProperties(hostile, {
+    approval: { get() { inputReads += 1; throw new Error("must not inspect receipt"); } },
+    getCredential: { get() { inputReads += 1; throw new Error("must not inspect callback"); } },
+  });
+  await assert.rejects(executeApprovedStripeCapabilitySpike(hostile), /execution is disabled/);
+  assert.equal(inputReads, 0);
 });
 
-test("approved Stripe transport authorizes immediately before one abortable non-redirecting fetch", async () => {
-  const calls = [];
-  const controller = new AbortController();
-  let authorizations = 0;
+test("public production modules contain no reachable network or credential boundary", async () => {
+  const [guardSource, transportSource] = await Promise.all([
+    readFile(new URL("../lib/spike-guard/guard.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../lib/spike-guard/stripe-transport.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.equal(guardSource.includes("guard-core"), false);
+  assert.equal(guardSource.includes("getCredential"), false);
+  assert.equal(guardSource.includes("fetch("), false);
+  assert.equal(transportSource.includes("fetch("), false);
+  assert.equal(transportSource.includes("api.stripe.com"), false);
+  assert.equal(transportSource.includes("Authorization"), false);
+});
+
+test("provider transport hard-disables before credential, authorization, or fetch callbacks", async () => {
+  const calls = { credential: 0, authorization: 0, fetch: 0 };
   const transport = createStripeGrantedTokenTransport({
-    fetchImpl: async (url, init) => {
-      calls.push({ url, init });
-      return {
-        status: 200,
-        ok: true,
-        headers: new Headers({ "request-id": "req_test_safe" }),
-        async json() { return { object: "shared_payment.granted_token", id: "spt_test_safe" }; },
-      };
-    },
+    fetchImpl: async () => { calls.fetch += 1; throw new Error("network must remain unreachable"); },
   });
-  const result = await transport({
+  const input = {
     request: FROZEN_SPIKE_REQUEST,
-    credential: { secret: "test_secret_placeholder" },
-    signal: controller.signal,
-    authorizeSend: async () => { authorizations += 1; },
-  });
-  assert.equal(authorizations, 1);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "https://api.stripe.com/v1/test_helpers/shared_payment/granted_tokens");
-  assert.equal(calls[0].init.redirect, "error");
-  assert.equal(calls[0].init.signal, controller.signal);
-  assert.match(result.requestReference, /^sha256:[a-f0-9]{64}$/);
-  assert.match(result.objectReference, /^sha256:[a-f0-9]{64}$/);
-  assert.doesNotMatch(JSON.stringify(result), /req_test_safe|spt_test_safe/);
+    get credential() { calls.credential += 1; return { secret: "synthetic-only" }; },
+    signal: new AbortController().signal,
+    authorizeSend: async () => { calls.authorization += 1; },
+  };
+  await assert.rejects(transport(input), /transport is disabled/);
+  assert.deepEqual(calls, { credential: 0, authorization: 0, fetch: 0 });
 });
 
 test("provider outcome projection drops all non-allowlisted caller strings", () => {
@@ -311,36 +332,19 @@ test("production error projection never repeats credential, token, request, or p
   assert.doesNotMatch(`${safe.message} ${safe.stack}`, /secret_marker_distinctive|spt_distinctive|req_distinctive|provider body/);
 });
 
-test("transport suppresses raw provider body and exception text", async () => {
-  const rawValues = "secret_marker_hidden spt_hidden req_hidden private response body";
-  const response = await createStripeGrantedTokenTransport({
-    fetchImpl: async () => ({
-      status: 400,
-      headers: new Headers({ "request-id": "req_hidden" }),
-      async json() { return { id: "spt_hidden", object: "provider-private-object", error: { message: rawValues } }; },
-    }),
-  })({
-    request: FROZEN_SPIKE_REQUEST,
-    credential: { secret: "server-held-placeholder" },
-    signal: new AbortController().signal,
-    authorizeSend: async () => {},
+test("disabled transport ignores credential-shaped input and suppresses all callbacks", async () => {
+  const calls = { fetch: 0, credential: 0, authorization: 0 };
+  const transport = createStripeGrantedTokenTransport({
+    fetchImpl: async () => { calls.fetch += 1; return {}; },
   });
-  assert.doesNotMatch(JSON.stringify(response), /secret_marker_hidden|spt_hidden|req_hidden|private response body/);
-  assert.equal(response.objectClass, "other");
-  assert.equal(response.hasError, true);
-
-  await assert.rejects(createStripeGrantedTokenTransport({
-    fetchImpl: async () => { throw new Error(rawValues); },
-  })({
-    request: FROZEN_SPIKE_REQUEST,
-    credential: { secret: "server-held-placeholder" },
-    signal: new AbortController().signal,
-    authorizeSend: async () => {},
-  }), (error) => {
-    assert.equal(error.message, "capability request outcome is ambiguous; do not retry");
-    assert.doesNotMatch(error.message, /secret_marker_hidden|spt_hidden|req_hidden|private response body/);
-    return true;
-  });
+  const input = {
+    get credential() { calls.credential += 1; return { secret: "synthetic-secret-only" }; },
+    get request() { return FROZEN_SPIKE_REQUEST; },
+    get signal() { return new AbortController().signal; },
+    authorizeSend: async () => { calls.authorization += 1; },
+  };
+  await assert.rejects(transport(input), /transport is disabled/);
+  assert.deepEqual(calls, { fetch: 0, credential: 0, authorization: 0 });
 });
 
 test("approval lease is immutable, anchored once, at most 600s, and capped by outer end", () => {
