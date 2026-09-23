@@ -2,9 +2,9 @@
 
 Status: `COMPLETE — PAUSED BEFORE CREDENTIAL BOUNDARY`
 
-This September 23 22:00–22:20 CDT final read-back supersedes every earlier
-execution-window draft, including all September 22 and earlier September 23
-drafts. September 22 approval-receipt timestamps remain historical metadata only.
+This September 23 22:35 CDT through September 24 00:35 CDT two-hour final read-back supersedes every earlier execution-window draft. Earlier approval-receipt timestamps remain historical metadata only.
+
+The NTP-synchronized host clock is the sole execution-clock authority. Session date metadata, chat timestamps, and document timestamps are non-authoritative. Immediately before credential access, record the host RFC-3339 timestamp, Unix epoch, and successful NTP synchronization evidence. Any unresolved mismatch or unverifiable NTP state stops execution.
 
 Final read-back prepared: `2026-09-22T16:29:20-05:00`
 
@@ -30,12 +30,13 @@ for exactly this scope:
 - Provider action: one SharedPaymentGrantedToken test-helper request
 - Usage currency: `usd`
 - Usage maximum: `100` minor units
-- Usage expiry: `2026-09-23T22:20:00-05:00` (CDT)
-- Exact expiry timestamp: `1790220000`
-- Execution window: `2026-09-23T22:00:00-05:00` through
-  `2026-09-23T22:20:00-05:00` (CDT)
-- Window epochs: `1790218800` through `1790220000`
-- Verified duration: `1200` seconds (20 minutes)
+- Usage expiry: `2026-09-24T00:35:00-05:00` (CDT)
+- Exact expiry timestamp: `1790228100`
+- Execution window: `2026-09-23T22:35:00-05:00` through
+  `2026-09-24T00:35:00-05:00` (CDT)
+- Window epochs: `1790220900` through `1790228100`
+- Verified duration: `7200` seconds (2 hours)
+- No delayed execution, rollover, extension, retry, or repeated request
 - Operator: Riley (`@integrations-reliability-engineer`)
 - Reviewer/stop authority: Emily (`@emily`)
 - Payment count: `0`
@@ -96,11 +97,11 @@ Approved request-field mapping:
 | `payment_method` | `pm_1UIbCpFDhOfb5F0FVPrBIB0T` | COMPLETE |
 | `usage_limits.currency` | `usd` | COMPLETE |
 | `usage_limits.max_amount` | `100` | COMPLETE |
-| `usage_limits.expires_at` | `1790220000` | COMPLETE |
+| `usage_limits.expires_at` | `1790228100` | COMPLETE |
 | Stripe request version | `2026-08-26.dahlia` | COMPLETE |
 
 The corrected expiry conversion was independently computed from
-`2026-09-23T22:20:00-05:00` and equals `1790220000`.
+`2026-09-24T00:35:00-05:00` and equals `1790228100`.
 
 ## Exact final read-back checklist
 
@@ -115,12 +116,12 @@ The corrected expiry conversion was independently computed from
 | Helper schema | PaymentMethod and usage limits match required fields | PASS |
 | Currency | `usd` | PASS |
 | Maximum amount | `100` minor units | PASS |
-| Expiry | `1790220000` / `2026-09-23T22:20:00-05:00` | PASS |
+| Expiry | `1790228100` / `2026-09-24T00:35:00-05:00` | PASS |
 | Provider request count | One create-helper request | PASS AS APPROVED BOUNDARY; not executed |
 | Retry | None | PASS AS APPROVED BOUNDARY |
 | Payment | Count `0`; `USD 0.00`; no PaymentIntent/confirmation/capture | PASS AS PROHIBITION |
 | Cleanup | At most one official revoke of the created token, if needed before window end | PASS AS CONDITIONAL BOUNDARY |
-| Window | `2026-09-23T22:00:00-05:00` (`1790218800`) to `2026-09-23T22:20:00-05:00` (`1790220000`); `1200` seconds | PASS; execution prohibited outside window |
+| Window | `2026-09-23T22:35:00-05:00` (`1790220900`) to `2026-09-24T00:35:00-05:00` (`1790228100`); `7200` seconds | PASS; execution prohibited outside window; no rollover/extension/repeat |
 | Operator | Riley | PASS |
 | Reviewer/stop authority | Emily | PASS |
 | Product scope/fallback | Written approval reported via Hermes | PASS |
@@ -136,8 +137,10 @@ The corrected expiry conversion was independently computed from
 After the window opens and before any vault or credential action, Emily must freshly
 read back all of the following:
 
-1. Current time is on or after `2026-09-23T22:00:00-05:00` and before
-   `2026-09-23T22:20:00-05:00`.
+1. The NTP-synchronized host clock reports a time on or after
+   `2026-09-23T22:35:00-05:00` and before `2026-09-24T00:35:00-05:00`.
+   Record the host RFC-3339 time, Unix epoch, and NTP synchronization evidence.
+   Session/chat/document timestamps are non-authoritative; any unresolved mismatch stops.
 2. Immediate user approval explicitly names this exact final read-back and still
    authorizes credential retrieval plus one helper request.
 3. The exact target remains `acct_1UDULUFDhOfb5F0F` / `PradPay sandbox`.
@@ -148,7 +151,7 @@ read back all of the following:
    - `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
    - `usd`
    - `100`
-   - `1790220000`
+   - `1790228100`
 7. ADR-0003 remains proposed/blocked; payment handlers remain empty; complete and
    delegate payment remain hard-blocked.
 8. No payment, destination, deployment, hosted mutation, second request, retry, or

@@ -2,9 +2,9 @@
 
 Status: non-secret preflight inputs complete; immediate credential-boundary approval pending. Do not execute.
 
-The September 23 22:00–22:20 CDT window below supersedes every earlier execution-
-window draft, including all September 22 and earlier September 23 drafts.
-September 22 approval-receipt timestamps are historical metadata only.
+The September 23 22:35 CDT through September 24 00:35 CDT two-hour window below supersedes every earlier execution-window draft. Earlier approval-receipt timestamps are historical metadata only.
+
+The NTP-synchronized host clock is the sole execution-clock authority. Session date metadata, chat timestamps, and document timestamps are non-authoritative. Immediately before credential access, the operator must record the host RFC-3339 timestamp, Unix epoch, and successful NTP synchronization evidence. Any unresolved mismatch or unverifiable NTP state stops execution.
 
 Package ID: `M3-STRIPE-CAP-SPIKE-001-PREP`
 
@@ -133,8 +133,8 @@ Exact helper inputs are fixed as follows:
 - `payment_method`: `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
 - `usage_limits.currency`: `usd`
 - `usage_limits.max_amount`: `100` minor units
-- `usage_limits.expires_at`: `1790220000`
-  (`2026-09-23T22:20:00-05:00`, CDT)
+- `usage_limits.expires_at`: `1790228100`
+  (`2026-09-24T00:35:00-05:00`, CDT)
 
 These values must be preserved literally. Do not search for, create, replace,
 normalize, or otherwise substitute a PaymentMethod or helper input.
@@ -153,13 +153,14 @@ logs, screenshots, docs, fixtures, or Git.
 
 ## Requested time window
 
-Approved execution window: one owner-scheduled 20-minute window.
+Approved execution window: one owner-scheduled two-hour window.
 
-- Approved start: `2026-09-23T22:00:00-05:00` (CDT)
-- Approved end: `2026-09-23T22:20:00-05:00` (CDT)
-- Start epoch: `1790218800`
-- End epoch: `1790220000`
-- Verified duration: `1200` seconds (20 minutes)
+- Approved start: `2026-09-23T22:35:00-05:00` (CDT)
+- Approved end: `2026-09-24T00:35:00-05:00` (CDT)
+- Start epoch: `1790220900`
+- End epoch: `1790228100`
+- Verified duration: `7200` seconds (2 hours)
+- No delayed execution, rollover, extension, or repeated request is authorized.
 - Approval expires automatically at the end timestamp or, if earlier, after the
   first helper result and the one pre-approved provider-documented cleanup request.
   If cleanup is not pre-approved or not required, approval expires at the first
@@ -212,14 +213,16 @@ Prads must approve all fields together:
 - Stripe API pin `2026-08-26.dahlia`: `YES`
 - ACP pin `2026-04-17`: `YES`
 - One capability-helper request: `YES`
-- Usage limits: `usd`, `100` minor units, expiry `1790220000`
-  (`2026-09-23T22:20:00-05:00` CDT)
+- Usage limits: `usd`, `100` minor units, expiry `1790228100`
+  (`2026-09-24T00:35:00-05:00` CDT)
 - Optional single cleanup request: `YES, only the documented revoke of the object
   created by the one helper request, if needed before window end`
 - Payment count `0` and amount `USD 0.00`: `YES`
 - Operator Riley and reviewer Emily: `YES`
-- Exact start/end window: `2026-09-23T22:00:00-05:00` through
-  `2026-09-23T22:20:00-05:00` (CDT)
+- Exact start/end window: `2026-09-23T22:35:00-05:00` through
+  `2026-09-24T00:35:00-05:00` (CDT)
+- NTP-synchronized host clock is the sole execution-clock authority: `YES`
+- No delayed execution, rollover, extension, retry, or repeated request: `YES`
 - Stop conditions and replay-only fallback acknowledged: `YES`
 - Written approval receipt recorded: `2026-09-22T16:29:20-05:00`
 - Immediate approval timestamp: `PENDING — DO NOT REQUEST UNTIL FINAL READ-BACK IS RETURNED`
