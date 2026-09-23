@@ -4,7 +4,7 @@ Status: non-secret preflight inputs complete; immediate credential-boundary appr
 
 The September 23 22:35 CDT through September 24 00:35 CDT two-hour window below supersedes every earlier execution-window draft. Earlier approval-receipt timestamps are historical metadata only.
 
-The NTP-synchronized host clock is the sole execution-clock authority. Session date metadata, chat timestamps, and document timestamps are non-authoritative. Immediately before credential access, the operator must record the host RFC-3339 timestamp, Unix epoch, and successful NTP synchronization evidence. Any unresolved mismatch or unverifiable NTP state stops execution.
+The NTP-synchronized host clock is the sole execution-time authority. Immediately before credential access, the operator must freshly verify and record NTP synchronization status, measured clock offset, the host's current absolute RFC-3339 timestamp, and the approved window's absolute start and end timestamps. Session, chat, document, and approval-receipt date metadata are non-authoritative. Once NTP synchronization and offset are freshly verified and recorded, a mismatch with those metadata sources does not by itself block execution. Execution must stop before credential access if NTP synchronization or offset cannot be verified, the host clock is outside the exact approved window, or any account, mode, input, version, operator, request-count, payment, or scope condition differs from the approval. No date may be inferred, normalized, or silently substituted as the execution-time authority.
 
 Package ID: `M3-STRIPE-CAP-SPIKE-001-PREP`
 
