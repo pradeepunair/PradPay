@@ -4,7 +4,14 @@ Status: non-secret preflight inputs complete; immediate credential-boundary appr
 
 The September 23 22:35 CDT through September 24 00:35 CDT two-hour window below supersedes every earlier execution-window draft. Earlier approval-receipt timestamps are historical metadata only.
 
-The NTP-synchronized host clock is the sole execution-time authority. Immediately before credential access, the operator must freshly verify and record NTP synchronization status, measured clock offset, the host's current absolute RFC-3339 timestamp, and the approved window's absolute start and end timestamps. Session, chat, document, and approval-receipt date metadata are non-authoritative. Once NTP synchronization and offset are freshly verified and recorded, a mismatch with those metadata sources does not by itself block execution. Execution must stop before credential access if NTP synchronization or offset cannot be verified, the host clock is outside the exact approved window, or any account, mode, input, version, operator, request-count, payment, or scope condition differs from the approval. No date may be inferred, normalized, or silently substituted as the execution-time authority.
+The NTP-corroborated host epoch is the sole execution-time authority. The local
+guard requires one unambiguous successful selected sample from
+`sntp -d time.apple.com`, a numeric absolute offset no greater than 1 second, and
+evidence no older than 60 seconds. Session, chat, document, and approval-receipt
+date metadata are non-authoritative. Missing, duplicate, malformed, failed, stale,
+future, wrong-target, disagreeing, or excessive-offset evidence stops before
+credential access. No date may be inferred, normalized, silently substituted, or
+implemented by changing system time.
 
 Package ID: `M3-STRIPE-CAP-SPIKE-001-PREP`
 
@@ -18,6 +25,7 @@ Related artifacts:
 - `docs/m3-entry-exit-gate-matrix.md` — E03-E08 blocked/partial; E09 local-only; X-gates externally unaccepted.
 - `docs/m3-external-evidence-template.md` — redacted evidence schema.
 - `docs/acp-compatibility.md` — ACP payment handlers empty; complete/delegate-payment hard-blocked.
+- `docs/m3-stripe-spike-guard.md` — local fail-closed execution guard contract.
 
 ## Preparation boundary
 
@@ -139,6 +147,12 @@ Exact helper inputs are fixed as follows:
 These values must be preserved literally. Do not search for, create, replace,
 normalize, or otherwise substitute a PaymentMethod or helper input.
 
+The complete approved request, including account/profile, endpoint, versions,
+capability, zero-payment effects, and no-retry/no-redirect/no-fallback/no-resubmit
+transport policy, is frozen under SHA-256
+`9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`.
+Any hash or literal mismatch stops before credential access.
+
 ## Requested operator and supervision
 
 - Requested execution operator: Riley (`@integrations-reliability-engineer`).
@@ -160,6 +174,9 @@ Approved execution window: one owner-scheduled two-hour window.
 - Start epoch: `1790220900`
 - End epoch: `1790228100`
 - Verified duration: `7200` seconds (2 hours)
+- Credential/action lease: one immutable lease of at most `600` seconds, anchored
+  to the fresh immediate-approval epoch and capped at `1790228100`; the end is
+  exclusive and no extension or re-anchor is authorized.
 - No delayed execution, rollover, extension, or repeated request is authorized.
 - Approval expires automatically at the end timestamp or, if earlier, after the
   first helper result and the one pre-approved provider-documented cleanup request.
@@ -222,6 +239,11 @@ Prads must approve all fields together:
 - Exact start/end window: `2026-09-23T22:35:00-05:00` through
   `2026-09-24T00:35:00-05:00` (CDT)
 - NTP-synchronized host clock is the sole execution-clock authority: `YES`
+- Selected NTP offset `|offset| <= 1s` and evidence age `0..60s`: `YES`
+- Frozen request hash
+  `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`: `YES`
+- One immutable action lease of at most 600 seconds, capped by outer end: `YES`
+- Atomic one-shot claim consumed before dispatch: `YES`
 - No delayed execution, rollover, extension, retry, or repeated request: `YES`
 - Stop conditions and replay-only fallback acknowledged: `YES`
 - Written approval receipt recorded: `2026-09-22T16:29:20-05:00`
@@ -244,8 +266,11 @@ Immediately before credential retrieval/injection, Emily must verify:
 2. Prads approved the exact account/profile, versions, one-request scope, operator,
    time window, cleanup, zero-payment limit, and stop conditions.
 3. Rotation/custody attestation is complete and current.
-4. The approved start time has arrived and the end time has not passed.
-5. ADR-0003 still says proposed/blocked and payment handlers are still empty.
+4. The deterministic selected-NTP parser passes, the outer epoch window is active,
+   and a fresh immutable action lease of at most 600 seconds is active.
+5. The frozen request hash matches, and the atomic one-shot claim can be consumed
+   before any credential retrieval or dispatch callback.
+6. ADR-0003 still says proposed/blocked and payment handlers are still empty.
 
 If any item fails, do not call the vault, do not retrieve/inject a credential, and
 do not call Stripe.
@@ -281,6 +306,11 @@ Stop before credential access if:
 - The sandbox/account/profile or test-mode identity is not exact.
 - The requested helper/version is not supported by current official documentation.
 - The approved window has not started or has expired.
+- The selected NTP evidence fails, is ambiguous, exceeds 1 second absolute offset,
+  or is older than 60 seconds.
+- The action lease is absent, expired, extended, re-anchored, or outside the outer
+  window.
+- The frozen request hash differs or the atomic one-shot claim is already consumed.
 - The task would require changing an account default, version, entitlement, or
   configuration.
 

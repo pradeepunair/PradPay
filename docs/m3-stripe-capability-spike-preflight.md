@@ -4,7 +4,14 @@ Status: `COMPLETE — PAUSED BEFORE CREDENTIAL BOUNDARY`
 
 This September 23 22:35 CDT through September 24 00:35 CDT two-hour final read-back supersedes every earlier execution-window draft. Earlier approval-receipt timestamps remain historical metadata only.
 
-The NTP-synchronized host clock is the sole execution-time authority. Immediately before credential access, the operator must freshly verify and record NTP synchronization status, measured clock offset, the host's current absolute RFC-3339 timestamp, and the approved window's absolute start and end timestamps. Session, chat, document, and approval-receipt date metadata are non-authoritative. Once NTP synchronization and offset are freshly verified and recorded, a mismatch with those metadata sources does not by itself block execution. Execution must stop before credential access if NTP synchronization or offset cannot be verified, the host clock is outside the exact approved window, or any account, mode, input, version, operator, request-count, payment, or scope condition differs from the approval. No date may be inferred, normalized, or silently substituted as the execution-time authority.
+The NTP-corroborated host epoch is the sole execution-time authority. The local
+guard requires exactly one successful selected `time.apple.com` sample, numeric
+absolute offset no greater than 1 second, and evidence age from 0 through 60
+seconds. Session, chat, document, and approval-receipt date metadata are
+non-authoritative. Any parse, success, target, offset, freshness, outer-window,
+inner-lease, request-hash, or one-shot-claim failure stops before credential access.
+No date may be inferred, normalized, silently substituted, or implemented by
+changing system time.
 
 Final read-back prepared: `2026-09-22T16:29:20-05:00`
 
@@ -62,6 +69,11 @@ No identifier was normalized, inferred, searched, or replaced.
 - The packet now contains the exact account, PaymentMethod, versions, helper
   inputs, execution window, operator/reviewer, zero-payment boundary, rotation and
   custody attestation, cleanup boundary, and stop conditions.
+- Local guard: `docs/m3-stripe-spike-guard.md`
+- Frozen approved-request SHA-256:
+  `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`
+- Action lease: immutable, 1 through 600 seconds, capped by `1790228100`.
+- Atomic one-shot claim is consumed before any credential or dispatch callback.
 - Immediate execution approval remains deliberately pending.
 
 ## Official helper schema verification
@@ -122,6 +134,10 @@ The corrected expiry conversion was independently computed from
 | Payment | Count `0`; `USD 0.00`; no PaymentIntent/confirmation/capture | PASS AS PROHIBITION |
 | Cleanup | At most one official revoke of the created token, if needed before window end | PASS AS CONDITIONAL BOUNDARY |
 | Window | `2026-09-23T22:35:00-05:00` (`1790220900`) to `2026-09-24T00:35:00-05:00` (`1790228100`); `7200` seconds | PASS; execution prohibited outside window; no rollover/extension/repeat |
+| Selected NTP | one success; numeric `|offset| <= 1s`; age `0..60s` | PASS IN LOCAL GUARD TESTS; runtime evidence still required |
+| Action lease | immutable `<=600s`, approval-anchored, outer-end capped | PASS IN LOCAL GUARD TESTS; immediate approval pending |
+| Frozen request | SHA-256 `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f` | PASS IN LOCAL GUARD TESTS |
+| One-shot claim | atomic and consumed before callbacks | PASS IN LOCAL GUARD TESTS; runtime state not created |
 | Operator | Riley | PASS |
 | Reviewer/stop authority | Emily | PASS |
 | Product scope/fallback | Written approval reported via Hermes | PASS |
@@ -137,7 +153,9 @@ The corrected expiry conversion was independently computed from
 After the window opens and before any vault or credential action, Emily must freshly
 read back all of the following:
 
-1. The NTP-synchronized host clock reports a time on or after
+1. The deterministic parser accepts exactly one successful selected NTP sample
+   with numeric absolute offset no greater than 1 second and age no greater than
+   60 seconds. The NTP-corroborated host clock reports a time on or after
    `2026-09-23T22:35:00-05:00` and before `2026-09-24T00:35:00-05:00`.
    Record the host RFC-3339 time, Unix epoch, and NTP synchronization evidence.
    Session/chat/document timestamps are non-authoritative; any unresolved mismatch stops.
@@ -154,7 +172,10 @@ read back all of the following:
    - `1790228100`
 7. ADR-0003 remains proposed/blocked; payment handlers remain empty; complete and
    delegate payment remain hard-blocked.
-8. No payment, destination, deployment, hosted mutation, second request, retry, or
+8. The approved request hash is
+   `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`,
+   the immutable action lease is active, and the one-shot claim is unconsumed.
+9. No payment, destination, deployment, hosted mutation, second request, retry, or
    broader scope has been added.
 
 If any check fails, do not retrieve/inject a credential and do not call Stripe.
@@ -164,6 +185,11 @@ If any check fails, do not retrieve/inject a credential and do not call Stripe.
 Stop without retry if:
 
 - The current time is outside the approved window.
+- NTP evidence is not one selected success, is stale/future, has nonnumeric or
+  excessive offset, targets another source, or disagrees with its summary.
+- The action lease is absent, expired, longer than 600 seconds, extended,
+  re-anchored, or outside the outer window.
+- The frozen request hash differs or the atomic one-shot claim is consumed.
 - Account/profile or test-mode identity differs.
 - Any literal request input differs.
 - Stripe requires a different PaymentMethod, version, field, permission, account
