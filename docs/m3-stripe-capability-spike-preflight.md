@@ -2,6 +2,9 @@
 
 Status: `COMPLETE — PAUSED BEFORE CREDENTIAL BOUNDARY`
 
+This September 23 final read-back supersedes every September 22 execution-window
+draft. September 22 approval-receipt timestamps remain historical metadata only.
+
 Final read-back prepared: `2026-09-22T16:29:20-05:00`
 
 Preflight input commit: `44ee2724faefdd8ab600d5bfe639a5444923c76f`
@@ -26,11 +29,11 @@ for exactly this scope:
 - Provider action: one SharedPaymentGrantedToken test-helper request
 - Usage currency: `usd`
 - Usage maximum: `100` minor units
-- Usage expiry: `2026-09-22T21:05:00-05:00` (CDT)
-- Exact expiry timestamp: `1790129100`
-- Execution window: `2026-09-22T20:45:00-05:00` through
-  `2026-09-22T21:05:00-05:00` (CDT)
-- Window epochs: `1790127900` through `1790129100`
+- Usage expiry: `2026-09-23T21:10:00-05:00` (CDT)
+- Exact expiry timestamp: `1790215800`
+- Execution window: `2026-09-23T20:50:00-05:00` through
+  `2026-09-23T21:10:00-05:00` (CDT)
+- Window epochs: `1790214600` through `1790215800`
 - Verified duration: `1200` seconds (20 minutes)
 - Operator: Riley (`@integrations-reliability-engineer`)
 - Reviewer/stop authority: Emily (`@emily`)
@@ -92,11 +95,11 @@ Approved request-field mapping:
 | `payment_method` | `pm_1UIbCpFDhOfb5F0FVPrBIB0T` | COMPLETE |
 | `usage_limits.currency` | `usd` | COMPLETE |
 | `usage_limits.max_amount` | `100` | COMPLETE |
-| `usage_limits.expires_at` | `1790129100` | COMPLETE |
+| `usage_limits.expires_at` | `1790215800` | COMPLETE |
 | Stripe request version | `2026-08-26.dahlia` | COMPLETE |
 
 The corrected expiry conversion was independently computed from
-`2026-09-22T21:05:00-05:00` and equals `1790129100`.
+`2026-09-23T21:10:00-05:00` and equals `1790215800`.
 
 ## Exact final read-back checklist
 
@@ -111,12 +114,12 @@ The corrected expiry conversion was independently computed from
 | Helper schema | PaymentMethod and usage limits match required fields | PASS |
 | Currency | `usd` | PASS |
 | Maximum amount | `100` minor units | PASS |
-| Expiry | `1790129100` / `2026-09-22T21:05:00-05:00` | PASS |
+| Expiry | `1790215800` / `2026-09-23T21:10:00-05:00` | PASS |
 | Provider request count | One create-helper request | PASS AS APPROVED BOUNDARY; not executed |
 | Retry | None | PASS AS APPROVED BOUNDARY |
 | Payment | Count `0`; `USD 0.00`; no PaymentIntent/confirmation/capture | PASS AS PROHIBITION |
 | Cleanup | At most one official revoke of the created token, if needed before window end | PASS AS CONDITIONAL BOUNDARY |
-| Window | `2026-09-22T20:45:00-05:00` (`1790127900`) to `2026-09-22T21:05:00-05:00` (`1790129100`); `1200` seconds | PASS; execution prohibited outside window |
+| Window | `2026-09-23T20:50:00-05:00` (`1790214600`) to `2026-09-23T21:10:00-05:00` (`1790215800`); `1200` seconds | PASS; execution prohibited outside window |
 | Operator | Riley | PASS |
 | Reviewer/stop authority | Emily | PASS |
 | Product scope/fallback | Written approval reported via Hermes | PASS |
@@ -132,8 +135,8 @@ The corrected expiry conversion was independently computed from
 After the window opens and before any vault or credential action, Emily must freshly
 read back all of the following:
 
-1. Current time is on or after `2026-09-22T20:45:00-05:00` and before
-   `2026-09-22T21:05:00-05:00`.
+1. Current time is on or after `2026-09-23T20:50:00-05:00` and before
+   `2026-09-23T21:10:00-05:00`.
 2. Immediate user approval explicitly names this exact final read-back and still
    authorizes credential retrieval plus one helper request.
 3. The exact target remains `acct_1UDULUFDhOfb5F0F` / `PradPay sandbox`.
@@ -144,7 +147,7 @@ read back all of the following:
    - `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
    - `usd`
    - `100`
-   - `1790129100`
+   - `1790215800`
 7. ADR-0003 remains proposed/blocked; payment handlers remain empty; complete and
    delegate payment remain hard-blocked.
 8. No payment, destination, deployment, hosted mutation, second request, retry, or
