@@ -129,8 +129,8 @@ Exact helper inputs are fixed as follows:
 - `payment_method`: `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
 - `usage_limits.currency`: `usd`
 - `usage_limits.max_amount`: `100` minor units
-- `usage_limits.expires_at`: `1790213400`
-  (`2026-09-23T20:30:00-05:00`, CDT)
+- `usage_limits.expires_at`: `1790129100`
+  (`2026-09-22T21:05:00-05:00`, CDT)
 
 These values must be preserved literally. Do not search for, create, replace,
 normalize, or otherwise substitute a PaymentMethod or helper input.
@@ -149,10 +149,13 @@ logs, screenshots, docs, fixtures, or Git.
 
 ## Requested time window
 
-Requested maximum execution window: one owner-scheduled 30-minute window.
+Approved execution window: one owner-scheduled 20-minute window.
 
-- Approved start: `2026-09-23T20:10:00-05:00` (CDT)
-- Approved end: `2026-09-23T20:30:00-05:00` (CDT)
+- Approved start: `2026-09-22T20:45:00-05:00` (CDT)
+- Approved end: `2026-09-22T21:05:00-05:00` (CDT)
+- Start epoch: `1790127900`
+- End epoch: `1790129100`
+- Verified duration: `1200` seconds (20 minutes)
 - Approval expires automatically at the end timestamp or, if earlier, after the
   first helper result and the one pre-approved provider-documented cleanup request.
   If cleanup is not pre-approved or not required, approval expires at the first
@@ -205,14 +208,14 @@ Prads must approve all fields together:
 - Stripe API pin `2026-08-26.dahlia`: `YES`
 - ACP pin `2026-04-17`: `YES`
 - One capability-helper request: `YES`
-- Usage limits: `usd`, `100` minor units, expiry `1790213400`
-  (`2026-09-23T20:30:00-05:00` CDT)
+- Usage limits: `usd`, `100` minor units, expiry `1790129100`
+  (`2026-09-22T21:05:00-05:00` CDT)
 - Optional single cleanup request: `YES, only the documented revoke of the object
   created by the one helper request, if needed before window end`
 - Payment count `0` and amount `USD 0.00`: `YES`
 - Operator Riley and reviewer Emily: `YES`
-- Exact start/end window: `2026-09-23T20:10:00-05:00` through
-  `2026-09-23T20:30:00-05:00` (CDT)
+- Exact start/end window: `2026-09-22T20:45:00-05:00` through
+  `2026-09-22T21:05:00-05:00` (CDT)
 - Stop conditions and replay-only fallback acknowledged: `YES`
 - Written approval receipt recorded: `2026-09-22T16:29:20-05:00`
 - Immediate approval timestamp: `PENDING — DO NOT REQUEST UNTIL FINAL READ-BACK IS RETURNED`
