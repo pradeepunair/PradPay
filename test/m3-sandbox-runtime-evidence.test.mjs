@@ -48,6 +48,21 @@ test("rejects invalid candidate identity, timestamps, status values, and check f
     ...candidate,
     checks: { ...allReady, database: { status: "ready", reason: "postgres://user:pass@host/db" } },
   }), RuntimeEvidenceError);
+  assert.throws(() => createRuntimeEvidence({
+    ...candidate,
+    checks: { ...allReady, worker: { status: "blocked", reason: "STRIPE_SECRET_KEY_SK_TEST_ABC123" } },
+  }), RuntimeEvidenceError);
+});
+
+test("rejects inherited, extra, symbol, custom-prototype, and accessor check containers", () => {
+  const inherited = Object.assign(Object.create({ extra: { status: "ready" } }), allReady);
+  assert.throws(() => createRuntimeEvidence({ ...candidate, checks: inherited }), RuntimeEvidenceError);
+  assert.throws(() => createRuntimeEvidence({ ...candidate, checks: { ...allReady, extra: { status: "ready" } } }), RuntimeEvidenceError);
+  assert.throws(() => createRuntimeEvidence({ ...candidate, checks: Object.assign({ ...allReady }, { [Symbol("extra")]: true }) }), RuntimeEvidenceError);
+  assert.throws(() => createRuntimeEvidence({ ...candidate, checks: new class extends Object { constructor() { super(); Object.assign(this, allReady); } }() }), RuntimeEvidenceError);
+  const accessorCheck = { ...allReady };
+  Object.defineProperty(accessorCheck, "database", { enumerable: true, get: () => ({ status: "ready" }) });
+  assert.throws(() => createRuntimeEvidence({ ...candidate, checks: accessorCheck }), RuntimeEvidenceError);
 });
 
 test("safe operational summary contains only fixed labels, commit, and aggregate counts", () => {
@@ -65,6 +80,13 @@ test("safe operational summary contains only fixed labels, commit, and aggregate
   });
   assert.equal(JSON.stringify(summary).includes("PROBE_UNAVAILABLE"), false);
   assert.throws(() => summarizeRuntimeEvidence({ ...evidence }), RuntimeEvidenceError);
+  assert.throws(() => summarizeRuntimeEvidence(Object.freeze({
+    schemaVersion: 1,
+    status: "READY",
+    environment: "staging",
+    commit: "attacker-controlled",
+    checks: {},
+  })), RuntimeEvidenceError);
 });
 
 test("does not turn evidence shape into a hosted health probe", () => {

@@ -16,9 +16,11 @@ This package defines the data contract for a future isolated staging readiness r
 - fixed UTC timestamp in millisecond ISO format;
 - exactly six checks: build, database, callback, worker, migration, and kill switch;
 - each check status must be `ready`, `blocked`, or `unknown`;
-- optional reason must be a fixed uppercase identifier, never free-form provider, endpoint, SQL, payload, or error text.
+- optional reason must be one fixed allowlisted code: `BUILD_CHECK_FAILED`, `DATABASE_CHECK_FAILED`, `CALLBACK_CHECK_FAILED`, `WORKER_CHECK_FAILED`, `MIGRATION_CHECK_FAILED`, `KILL_SWITCH_CHECK_FAILED`, or `PROBE_UNAVAILABLE`; free-form provider, endpoint, SQL, payload, error text, and credential-like strings are rejected.
 
-Missing, malformed, extra, or unsafe fields fail closed with a fixed error. Any blocked or unknown check makes the evidence `BLOCKED`. Evidence and nested checks are immutable. `summarizeRuntimeEvidence` emits only a fixed event name, status, environment, commit, and aggregate check counts; it excludes individual reasons and any free-form data.
+Check containers must be plain records with exactly those six own string keys. Inherited properties, custom prototypes, symbols, accessors, non-enumerable fields, and extra fields are rejected.
+
+Missing, malformed, extra, or unsafe fields fail closed with a fixed error. Any blocked or unknown check makes the evidence `BLOCKED`. Evidence and nested checks are immutable and factory-branded; the summary accepts only the exact object produced by the validator. `summarizeRuntimeEvidence` emits only a fixed event name, status, environment, commit, and aggregate check counts; it excludes individual reasons and any free-form data.
 
 ## Local verification
 
