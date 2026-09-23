@@ -25,8 +25,8 @@ test("local composition imports only the accepted local persistence and reliabil
   const text = await source("lib/composition/local-webhook.mjs");
   const imports = [...text.matchAll(/from\s+["']([^"']+)["']/g)].map((match) => match[1]).sort();
   assert.deepEqual(imports, [
-    "../../app/api/webhooks/stripe/route.js",
     "../payments/stripe-webhook-receipts.mjs",
+    "../payments/stripe-webhook-route.mjs",
     "../persistence/postgres.mjs",
     "../persistence/reliability-adapter.mjs",
     "../stripe-webhook.mjs",

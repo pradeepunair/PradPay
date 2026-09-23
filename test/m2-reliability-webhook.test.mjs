@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import Stripe from "stripe";
 
-import { createStripeWebhookPost } from "../app/api/webhooks/stripe/route.js";
+import { createStripeWebhookPost } from "../lib/payments/stripe-webhook-route.mjs";
 import {
   applyStripePaymentEvent,
   createStripeWebhookReceiptService,
