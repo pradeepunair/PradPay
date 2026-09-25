@@ -6,6 +6,7 @@
     "dev": "next dev --hostname 127.0.0.1 --port 3000",
     "build": "next build",
     "test": "node --test test/*.test.mjs",
+    "sandbox:smoke": "node scripts/m3-sandbox-smoke.mjs",
     "docs:phases": "node scripts/build-phase-html.mjs",
     "docs:phases:validate": "node scripts/check-phase-html.mjs",
     "docs:phases:check": "node scripts/build-phase-html.mjs --check && npm run docs:phases:validate",
