@@ -23,7 +23,7 @@ Product acceptance is claimed. ADR-0003 remains proposed and blocked.
 ## Entry conditions
 
 - Phase 2 authority reservation and no-payment boundary pass.
-- ADR-0003 is accepted from an authenticated Stripe test-account spike.
+|- ADR-0003 is proposed/blocked; a separately authorized authenticated Stripe test-account spike is required before Phase 3 implementation.
 - Stable test callback, secret ownership, rotation, and environment checks exist.
 - Kill switch and budgets preserve reconciliation of submitted attempts.
 
