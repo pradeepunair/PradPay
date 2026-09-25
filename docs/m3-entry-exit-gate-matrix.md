@@ -17,7 +17,7 @@ Input integrity
 | --- | --- | --- |
 | `docs/product/paymentlab-ai-m3-readiness.md` | M3.1-readiness; external reviewed authority input | `b8ce25060c035f74c23294c03ae7622be0766aa927c6d97ef37c354c45fccc3e` |
 | `docs/product/paymentlab-ai-m2-acceptance.md` | M2.0 acceptance; external reviewed authority input | `38fd76340fc2f068e310358181af10e2ad964b4a56d02d70cd1c8c7def172e17` |
-| `docs/decisions/0003-stripe-payment-path.md` | proposed/blocked; corrected package artifact | `0121e90bd9b051e58fc1ad5edcd917ccde3411ad52456fc4291ff61dfd469084` (pre-package input: `f7459da50b2528c53800a16956ce7677d446bdeca464f8ab40d7f2949fd02e59`) |
+| `docs/decisions/0003-stripe-payment-path.md` | proposed/blocked; preparation-only packet linked, no approval/evidence | `e17e88757aa259d348bd3b9bdcd27a7c4dae15b48666156460b35a2a10cbc000` (M3-GATE-DOC-001 artifact: `0121e90bd9b051e58fc1ad5edcd917ccde3411ad52456fc4291ff61dfd469084`) |
 | `docs/decisions/0004-durable-workflow.md` | accepted for local fallback; hosted runner unselected | `403dbb75de0375b56a019d48563524183f2d9b1cff97a25d0963e01b096fa45c` |
 | `docs/decisions/0007-database-and-orm.md` | proposed | `1424c0a6a59688ea2fcb7b871b285521f8b013895651bdd5a6611105fa24725c` |
 | `docs/m3-local-integration-evidence.md` | exact-candidate local evidence | `38a6f1d0a5ce51dae15b5978de92f8648d65d4a6cc1ef436c82f14d84643c041` |
