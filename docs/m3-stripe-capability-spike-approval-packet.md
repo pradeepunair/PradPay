@@ -2,7 +2,7 @@
 
 Status: request scope is documented; execution is HARD-DISABLED. No immediate owner-authenticated receipt mechanism or trust anchors are established. Do not execute.
 
-The September 23 22:35 CDT through September 24 00:35 CDT two-hour window below supersedes every earlier execution-window draft. Earlier approval-receipt timestamps are historical metadata only.
+The September 24 21:00 CDT through September 24 23:00 CDT two-hour window below supersedes every earlier execution-window draft. Earlier approval-receipt timestamps are historical metadata only.
 
 The NTP-corroborated host epoch is the sole execution-time authority. The local
 guard requires one unambiguous successful selected sample from
@@ -142,8 +142,8 @@ Exact helper inputs are fixed as follows:
 - `payment_method`: `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
 - `usage_limits.currency`: `usd`
 - `usage_limits.max_amount`: `100` minor units
-- `usage_limits.expires_at`: `1790228100`
-  (`2026-09-24T00:35:00-05:00`, CDT)
+- `usage_limits.expires_at`: `1790247600`
+  (`2026-09-24T23:00:00-05:00`, CDT)
 
 These values must be preserved literally. Do not search for, create, replace,
 normalize, or otherwise substitute a PaymentMethod or helper input.
@@ -170,13 +170,13 @@ logs, screenshots, docs, fixtures, or Git.
 
 Approved execution window: one owner-scheduled two-hour window.
 
-- Approved start: `2026-09-23T22:35:00-05:00` (CDT)
-- Approved end: `2026-09-24T00:35:00-05:00` (CDT)
-- Start epoch: `1790220900`
-- End epoch: `1790228100`
+Approved start: `2026-09-24T21:00:00-05:00` (CDT)
+Approved end: `2026-09-24T23:00:00-05:00` (CDT)
+Start epoch: `1790240400`
+End epoch: `1790247600`
 - Verified duration: `7200` seconds (2 hours)
 - Credential/action lease: one immutable lease of at most `600` seconds, anchored
-  to the fresh immediate-approval epoch and capped at `1790228100`; the end is
+  to the fresh immediate-approval epoch and capped at `1790247600`; the end is
   exclusive and no extension or re-anchor is authorized.
 - No delayed execution, rollover, extension, or repeated request is authorized.
 - Approval expires automatically at the end timestamp or, if earlier, after the
@@ -231,14 +231,14 @@ Prads must approve all fields together:
 - Stripe API pin `2026-08-26.dahlia`: `YES`
 - ACP pin `2026-04-17`: `YES`
 - One capability-helper request: `YES`
-- Usage limits: `usd`, `100` minor units, expiry `1790228100`
-  (`2026-09-24T00:35:00-05:00` CDT)
+- Usage limits: `usd`, `100` minor units, expiry `1790247600`
+  (`2026-09-24T23:00:00-05:00` CDT)
 - Optional single cleanup request: `YES, only the documented revoke of the object
   created by the one helper request, if needed before window end`
 - Payment count `0` and amount `USD 0.00`: `YES`
 - Operator Riley and reviewer Emily: `YES`
-- Exact start/end window: `2026-09-23T22:35:00-05:00` through
-  `2026-09-24T00:35:00-05:00` (CDT)
+- Exact start/end window: `2026-09-24T21:00:00-05:00` through
+  `2026-09-24T23:00:00-05:00` (CDT)
 - NTP-synchronized host clock is the sole execution-clock authority: `YES`
 - Selected NTP offset `|offset| <= 1s` and evidence age `0..60s`: `YES`
 - Frozen request hash

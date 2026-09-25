@@ -2,11 +2,7 @@
 
 Status: `COMPLETE — HARD-DISABLED, PAUSED BEFORE CREDENTIAL BOUNDARY`
 
-The time and request details below are historical scope only. Current code rejects all
-production entry-point calls before inspecting input, creating state, capturing a clock,
-retrieving credentials, or dispatching. No receipt verifier or network transport is
-available. This preflight is not execution authorization; the previous candidate and
-all scheduled windows remain non-executable.
+This September 24 21:00 CDT through September 24 23:00 CDT two-hour final read-back supersedes every earlier execution-window draft. Earlier approval-receipt timestamps remain historical metadata only.
 
 Any future separately approved verifier must use NTP-corroborated host epoch as the
 sole execution-time authority. Local parser tests require exactly one successful
@@ -40,11 +36,11 @@ for exactly this scope:
 - Provider action: one SharedPaymentGrantedToken test-helper request
 - Usage currency: `usd`
 - Usage maximum: `100` minor units
-- Usage expiry: `2026-09-24T00:35:00-05:00` (CDT)
-- Exact expiry timestamp: `1790228100`
-- Execution window: `2026-09-23T22:35:00-05:00` through
-  `2026-09-24T00:35:00-05:00` (CDT)
-- Window epochs: `1790220900` through `1790228100`
+- Usage expiry: `2026-09-24T23:00:00-05:00` (CDT)
+- Exact expiry timestamp: `1790247600`
+- Execution window: `2026-09-24T21:00:00-05:00` through
+  `2026-09-24T23:00:00-05:00` (CDT)
+- Window epochs: `1790240400` through `1790247600`
 - Verified duration: `7200` seconds (2 hours)
 - No delayed execution, rollover, extension, retry, or repeated request
 - Operator: Riley (`@integrations-reliability-engineer`)
@@ -75,9 +71,9 @@ No identifier was normalized, inferred, searched, or replaced.
 - Local guard: `docs/m3-stripe-spike-guard.md`
 - Frozen approved-request SHA-256:
   `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`
-- Lease/window/request and atomic-state properties are tested only on dormant local fake-core paths; no production approval is parsed and no runtime claim is consumed.
-- Product/Security have not established a signer trust root, authenticated operator identity source, or protected durable nonce store.
-- Immediate execution approval cannot be made effective until the verified receipt design is implemented and independently QA-approved.
+- Action lease: immutable, 1 through 600 seconds, capped by `1790247600`.
+- Atomic one-shot claim is consumed before any credential or dispatch callback.
+- Immediate execution approval remains deliberately pending.
 
 ## Official helper schema verification
 
@@ -112,11 +108,11 @@ Approved request-field mapping:
 | `payment_method` | `pm_1UIbCpFDhOfb5F0FVPrBIB0T` | COMPLETE |
 | `usage_limits.currency` | `usd` | COMPLETE |
 | `usage_limits.max_amount` | `100` | COMPLETE |
-| `usage_limits.expires_at` | `1790228100` | COMPLETE |
+| `usage_limits.expires_at` | `1790247600` | COMPLETE |
 | Stripe request version | `2026-08-26.dahlia` | COMPLETE |
 
 The corrected expiry conversion was independently computed from
-`2026-09-24T00:35:00-05:00` and equals `1790228100`.
+`2026-09-24T23:00:00-05:00` and equals `1790247600`.
 
 ## Exact final read-back checklist
 
@@ -131,12 +127,12 @@ The corrected expiry conversion was independently computed from
 | Helper schema | PaymentMethod and usage limits match required fields | PASS |
 | Currency | `usd` | PASS |
 | Maximum amount | `100` minor units | PASS |
-| Expiry | `1790228100` / `2026-09-24T00:35:00-05:00` | PASS |
+| Expiry | `1790247600` / `2026-09-24T23:00:00-05:00` | PASS |
 | Provider request count | One create-helper request | PASS AS APPROVED BOUNDARY; not executed |
 | Retry | None | PASS AS APPROVED BOUNDARY |
 | Payment | Count `0`; `USD 0.00`; no PaymentIntent/confirmation/capture | PASS AS PROHIBITION |
 | Cleanup | At most one official revoke of the created token, if needed before window end | PASS AS CONDITIONAL BOUNDARY |
-| Window | `2026-09-23T22:35:00-05:00` (`1790220900`) to `2026-09-24T00:35:00-05:00` (`1790228100`); `7200` seconds | PASS; execution prohibited outside window; no rollover/extension/repeat |
+| Window | `2026-09-24T21:00:00-05:00` (`1790240400`) to `2026-09-24T23:00:00-05:00` (`1790247600`); `7200` seconds | PASS; execution prohibited outside window; no rollover/extension/repeat |
 | Selected NTP | one success; numeric `|offset| <= 1s`; age `0..60s` | PASS IN LOCAL GUARD TESTS; runtime evidence still required |
 | Action lease | immutable `<=600s`, approval-anchored, outer-end capped | PASS IN LOCAL GUARD TESTS; immediate approval pending |
 | Frozen request | SHA-256 `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f` | PASS IN LOCAL GUARD TESTS |
@@ -159,16 +155,30 @@ receipt implementation, not operational instructions. They cannot authorize cred
 retrieval or provider calls on this candidate. Any missing or failed gate keeps the
 entry point hard-disabled:
 
-1. Independently verify signer trust root, authorized owner, operator identity, and
-   receipt signature over exact candidate/request/account/profile/API/ACP/scope fields.
-2. Verify owner approval time, unpredictable nonce, exact outer-window bounds, and an
-   immutable lease of at most 600 seconds capped by the outer end.
-3. Atomically consume the nonce in approved protected durable state before any
-   credential callback; fail closed on replay, race loss, storage uncertainty, or
-   rollback ambiguity.
-4. Re-verify the same candidate, request, owner/operator, NTP evidence, window, and
-   lease immediately before any future provider dispatch.
-5. Assert all rejected paths leave credential/provider callback counters at zero.
+1. The deterministic parser accepts exactly one successful selected NTP sample
+   with numeric absolute offset no greater than 1 second and age no greater than
+   60 seconds. The NTP-corroborated host clock reports a time on or after
+   `2026-09-24T21:00:00-05:00` and before `2026-09-24T23:00:00-05:00`.
+   Record the host RFC-3339 time, Unix epoch, and NTP synchronization evidence.
+   Session/chat/document timestamps are non-authoritative; any unresolved mismatch stops.
+2. Immediate user approval explicitly names this exact final read-back and still
+   authorizes credential retrieval plus one helper request.
+3. The exact target remains `acct_1UDULUFDhOfb5F0F` / `PradPay sandbox`.
+4. The injected credential resolves to test mode for that exact account; any
+   mismatch or live-mode indicator stops before the helper request.
+5. Request version remains `2026-08-26.dahlia`.
+6. Request inputs remain exactly:
+   - `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
+   - `usd`
+   - `100`
+   - `1790247600`
+7. ADR-0003 remains proposed/blocked; payment handlers remain empty; complete and
+   delegate payment remain hard-blocked.
+8. The approved request hash is
+   `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`,
+   the immutable action lease is active, and the one-shot claim is unconsumed.
+9. No payment, destination, deployment, hosted mutation, second request, retry, or
+   broader scope has been added.
 
 This candidate has no approved signer trust root, authenticated operator identity,
 protected nonce store, receipt verifier, or network transport. Do not retrieve a
