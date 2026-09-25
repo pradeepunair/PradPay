@@ -18,8 +18,8 @@ apply only to a future explicitly approved external dispatch.
 
 ## Normative outer window
 
-- Start, inclusive: `1790220900` (`2026-09-23T22:35:00-05:00`)
-- End, exclusive: `1790228100` (`2026-09-24T00:35:00-05:00`)
+- Start, inclusive: `1790240400` (`2026-09-24T21:00:00-05:00`)
+- End, exclusive: `1790247600` (`2026-09-24T23:00:00-05:00`)
 - Duration: `7200` seconds
 
 ## Deterministic clock gate
@@ -73,7 +73,7 @@ The canonical request hash is:
 `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`
 
 It covers the exact account/profile, POST path, Stripe API, ACP version, helper
-capability, PaymentMethod, `usd`/`100`, expiry `1790228100`, zero-payment effects,
+capability, PaymentMethod, `usd`/`100`, expiry `1790247600`, zero-payment effects,
 and transport policy. Any additional, missing, or changed field is rejected,
 including alternate account/version/input/PaymentMethod/SPT capability, retry,
 redirect, fallback, resubmit, or more than one attempt.

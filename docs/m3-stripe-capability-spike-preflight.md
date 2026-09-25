@@ -2,7 +2,7 @@
 
 Status: `COMPLETE — PAUSED BEFORE CREDENTIAL BOUNDARY`
 
-This September 23 22:35 CDT through September 24 00:35 CDT two-hour final read-back supersedes every earlier execution-window draft. Earlier approval-receipt timestamps remain historical metadata only.
+This September 24 21:00 CDT through September 24 23:00 CDT two-hour final read-back supersedes every earlier execution-window draft. Earlier approval-receipt timestamps remain historical metadata only.
 
 The NTP-corroborated host epoch is the sole execution-time authority. The local
 guard requires exactly one successful selected `time.apple.com` sample, numeric
@@ -37,11 +37,11 @@ for exactly this scope:
 - Provider action: one SharedPaymentGrantedToken test-helper request
 - Usage currency: `usd`
 - Usage maximum: `100` minor units
-- Usage expiry: `2026-09-24T00:35:00-05:00` (CDT)
-- Exact expiry timestamp: `1790228100`
-- Execution window: `2026-09-23T22:35:00-05:00` through
-  `2026-09-24T00:35:00-05:00` (CDT)
-- Window epochs: `1790220900` through `1790228100`
+- Usage expiry: `2026-09-24T23:00:00-05:00` (CDT)
+- Exact expiry timestamp: `1790247600`
+- Execution window: `2026-09-24T21:00:00-05:00` through
+  `2026-09-24T23:00:00-05:00` (CDT)
+- Window epochs: `1790240400` through `1790247600`
 - Verified duration: `7200` seconds (2 hours)
 - No delayed execution, rollover, extension, retry, or repeated request
 - Operator: Riley (`@integrations-reliability-engineer`)
@@ -72,7 +72,7 @@ No identifier was normalized, inferred, searched, or replaced.
 - Local guard: `docs/m3-stripe-spike-guard.md`
 - Frozen approved-request SHA-256:
   `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f`
-- Action lease: immutable, 1 through 600 seconds, capped by `1790228100`.
+- Action lease: immutable, 1 through 600 seconds, capped by `1790247600`.
 - Atomic one-shot claim is consumed before any credential or dispatch callback.
 - Immediate execution approval remains deliberately pending.
 
@@ -109,11 +109,11 @@ Approved request-field mapping:
 | `payment_method` | `pm_1UIbCpFDhOfb5F0FVPrBIB0T` | COMPLETE |
 | `usage_limits.currency` | `usd` | COMPLETE |
 | `usage_limits.max_amount` | `100` | COMPLETE |
-| `usage_limits.expires_at` | `1790228100` | COMPLETE |
+| `usage_limits.expires_at` | `1790247600` | COMPLETE |
 | Stripe request version | `2026-08-26.dahlia` | COMPLETE |
 
 The corrected expiry conversion was independently computed from
-`2026-09-24T00:35:00-05:00` and equals `1790228100`.
+`2026-09-24T23:00:00-05:00` and equals `1790247600`.
 
 ## Exact final read-back checklist
 
@@ -128,12 +128,12 @@ The corrected expiry conversion was independently computed from
 | Helper schema | PaymentMethod and usage limits match required fields | PASS |
 | Currency | `usd` | PASS |
 | Maximum amount | `100` minor units | PASS |
-| Expiry | `1790228100` / `2026-09-24T00:35:00-05:00` | PASS |
+| Expiry | `1790247600` / `2026-09-24T23:00:00-05:00` | PASS |
 | Provider request count | One create-helper request | PASS AS APPROVED BOUNDARY; not executed |
 | Retry | None | PASS AS APPROVED BOUNDARY |
 | Payment | Count `0`; `USD 0.00`; no PaymentIntent/confirmation/capture | PASS AS PROHIBITION |
 | Cleanup | At most one official revoke of the created token, if needed before window end | PASS AS CONDITIONAL BOUNDARY |
-| Window | `2026-09-23T22:35:00-05:00` (`1790220900`) to `2026-09-24T00:35:00-05:00` (`1790228100`); `7200` seconds | PASS; execution prohibited outside window; no rollover/extension/repeat |
+| Window | `2026-09-24T21:00:00-05:00` (`1790240400`) to `2026-09-24T23:00:00-05:00` (`1790247600`); `7200` seconds | PASS; execution prohibited outside window; no rollover/extension/repeat |
 | Selected NTP | one success; numeric `|offset| <= 1s`; age `0..60s` | PASS IN LOCAL GUARD TESTS; runtime evidence still required |
 | Action lease | immutable `<=600s`, approval-anchored, outer-end capped | PASS IN LOCAL GUARD TESTS; immediate approval pending |
 | Frozen request | SHA-256 `9b65d45d89ce5ad18eb6f1da316b89cbaba2ae4ea14566dfc5a6b863022b0f9f` | PASS IN LOCAL GUARD TESTS |
@@ -156,7 +156,7 @@ read back all of the following:
 1. The deterministic parser accepts exactly one successful selected NTP sample
    with numeric absolute offset no greater than 1 second and age no greater than
    60 seconds. The NTP-corroborated host clock reports a time on or after
-   `2026-09-23T22:35:00-05:00` and before `2026-09-24T00:35:00-05:00`.
+   `2026-09-24T21:00:00-05:00` and before `2026-09-24T23:00:00-05:00`.
    Record the host RFC-3339 time, Unix epoch, and NTP synchronization evidence.
    Session/chat/document timestamps are non-authoritative; any unresolved mismatch stops.
 2. Immediate user approval explicitly names this exact final read-back and still
@@ -169,7 +169,7 @@ read back all of the following:
    - `pm_1UIbCpFDhOfb5F0FVPrBIB0T`
    - `usd`
    - `100`
-   - `1790228100`
+   - `1790247600`
 7. ADR-0003 remains proposed/blocked; payment handlers remain empty; complete and
    delegate payment remain hard-blocked.
 8. The approved request hash is
